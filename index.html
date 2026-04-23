@@ -1,34 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configurateur GPX 3D</title>
+  <style>
+    :root {
+      --font-sans: Arial, Helvetica, sans-serif;
+      --color-background-primary: #ffffff;
+      --color-background-secondary: #f5f5f5;
+      --color-border-tertiary: #d9d9d9;
+      --color-border-secondary: #cfcfcf;
+      --color-text-primary: #111111;
+      --color-text-secondary: #666666;
+      --color-background-info: #eef4ff;
+      --color-text-info: #2952cc;
+      --border-radius-lg: 16px;
+      --border-radius-md: 10px;
+    }
 
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font-sans); }
-#app { display: grid; grid-template-columns: 1fr 340px; gap: 24px; padding: 1rem 0; min-height: 600px; }
-#canvas-wrap { position: relative; aspect-ratio: 1; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; display: flex; align-items: center; justify-content: center; }
-canvas { display: block; }
-#controls { display: flex; flex-direction: column; gap: 16px; }
-.ctrl-block { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
-.ctrl-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; letter-spacing: 0.04em; }
-.ctrl-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 12px; }
-.row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.row label { font-size: 13px; color: var(--color-text-secondary); min-width: 90px; }
-.row span { font-size: 13px; font-weight: 500; color: var(--color-text-primary); min-width: 36px; text-align: right; }
-input[type=range] { flex: 1; }
-input[type=text] { width: 100%; font-size: 13px; padding: 6px 10px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-secondary); color: var(--color-text-primary); }
-.upload-zone { border: 1px dashed var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 24px; text-align: center; cursor: pointer; transition: background 0.15s; }
-.upload-zone:hover { background: var(--color-background-secondary); }
-.upload-zone p { font-size: 13px; color: var(--color-text-secondary); margin-top: 6px; }
-.upload-zone strong { font-size: 14px; color: var(--color-text-primary); }
-.btn-order { width: 100%; padding: 12px; background: var(--color-text-primary); color: var(--color-background-primary); border: none; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
-.btn-order:hover { opacity: 0.85; }
-.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--color-background-info); color: var(--color-text-info); }
-#filename { font-size: 12px; color: var(--color-text-secondary); margin-top: 6px; text-align: center; }
-#overlay-text { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 11px; color: rgba(180,180,180,0.9); letter-spacing: 0.06em; pointer-events: none; font-family: var(--font-sans); }
-</style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-sans); background: #fff; color: var(--color-text-primary); padding: 24px; }
+    #app { display: grid; grid-template-columns: 1fr 340px; gap: 24px; min-height: 600px; max-width: 1400px; margin: 0 auto; }
+    #canvas-wrap { position: relative; aspect-ratio: 1; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 500px; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #controls { display: flex; flex-direction: column; gap: 16px; }
+    .ctrl-block { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+    .ctrl-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; letter-spacing: 0.04em; }
+    .ctrl-title { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 12px; }
+    .row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .row label { font-size: 13px; color: var(--color-text-secondary); min-width: 90px; }
+    .row span { font-size: 13px; font-weight: 600; color: var(--color-text-primary); min-width: 50px; text-align: right; }
+    input[type=range] { flex: 1; }
+    input[type=text] { width: 100%; font-size: 13px; padding: 8px 10px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-secondary); color: var(--color-text-primary); }
+    .upload-zone { border: 1px dashed var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 24px; text-align: center; cursor: pointer; transition: background 0.15s; }
+    .upload-zone:hover { background: var(--color-background-secondary); }
+    .upload-zone p { font-size: 13px; color: var(--color-text-secondary); margin-top: 6px; }
+    .upload-zone strong { font-size: 14px; color: var(--color-text-primary); }
+    .btn-order { width: 100%; padding: 12px; background: var(--color-text-primary); color: var(--color-background-primary); border: none; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    .btn-order:hover { opacity: 0.85; }
+    .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--color-background-info); color: var(--color-text-info); }
+    #filename { font-size: 12px; color: var(--color-text-secondary); margin-top: 6px; text-align: center; }
+    #overlay-text { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 11px; color: rgba(120,120,120,0.95); letter-spacing: 0.06em; pointer-events: none; font-family: var(--font-sans); padding: 0 10px; }
+
+    @media (max-width: 980px) {
+      #app { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
 
 <div id="app">
   <div id="canvas-wrap">
     <canvas id="c"></canvas>
-    <div id="overlay-text" id="plate-text"></div>
+    <div id="overlay-text"></div>
   </div>
 
   <div id="controls">
@@ -74,7 +99,7 @@ input[type=text] { width: 100%; font-size: 13px; padding: 6px 10px; border: 0.5p
       <input type="text" id="txt2" value="57.5km · 4380m D+">
     </div>
 
-    <button class="btn-order" onclick="sendOrder()">Commander → ↗</button>
+    <button class="btn-order" onclick="sendOrder()">Commander →</button>
   </div>
 </div>
 
@@ -95,12 +120,18 @@ const DEMO_POINTS = (() => {
 let gpxPoints = DEMO_POINTS;
 let elevScale = 3, zoomVal = 1, rotH = -30, rotV = 35;
 let txt1 = 'Patrouille des Glaciers', txt2 = '57.5km · 4380m D+';
-let renderer, scene, camera, terrainMesh, traceMesh, animId;
+let filename = 'Aucun fichier — démonstration active';
+let renderer, scene, camera, terrainMesh, traceMesh;
 
 function initThree() {
   const wrap = document.getElementById('canvas-wrap');
-  const size = wrap.clientWidth;
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: true });
+  const size = wrap.clientWidth || 600;
+
+  renderer = new THREE.WebGLRenderer({
+    canvas: document.getElementById('c'),
+    antialias: true,
+    alpha: true
+  });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(size, size);
   renderer.setClearColor(0x000000, 0);
@@ -110,9 +141,11 @@ function initThree() {
 
   const ambLight = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambLight);
+
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
   dirLight.position.set(2, 4, 3);
   scene.add(dirLight);
+
   const fillLight = new THREE.DirectionalLight(0xaabbdd, 0.3);
   fillLight.position.set(-2, 1, -2);
   scene.add(fillLight);
@@ -126,7 +159,10 @@ function buildScene() {
   if (traceMesh) scene.remove(traceMesh);
 
   const pts = gpxPoints;
-  const lats = pts.map(p => p.lat), lons = pts.map(p => p.lon), eles = pts.map(p => p.ele);
+  const lats = pts.map(p => p.lat);
+  const lons = pts.map(p => p.lon);
+  const eles = pts.map(p => p.ele);
+
   const minLat = Math.min(...lats), maxLat = Math.max(...lats);
   const minLon = Math.min(...lons), maxLon = Math.max(...lons);
   const minEle = Math.min(...eles), maxEle = Math.max(...eles);
@@ -140,7 +176,8 @@ function buildScene() {
     for (const p of pts) {
       const px = (p.lon - minLon) / (maxLon - minLon || 1);
       const py = (p.lat - minLat) / (maxLat - minLat || 1);
-      const dx = nx - px, dy = ny - py;
+      const dx = nx - px;
+      const dy = ny - py;
       const d2 = dx * dx + dy * dy;
       const w = 1 / (d2 + 0.0004);
       totalW += w;
@@ -157,19 +194,26 @@ function buildScene() {
   for (let iy = 0; iy < GRID; iy++) {
     for (let ix = 0; ix < GRID; ix++) {
       const idx = iy * GRID + ix;
-      const nx = ix / (GRID - 1), ny = 1 - iy / (GRID - 1);
+      const nx = ix / (GRID - 1);
+      const ny = 1 - iy / (GRID - 1);
       const e = sampleElevation(nx, ny);
       pos.setY(idx, e * elevH);
     }
   }
+
   geo.computeVertexNormals();
 
-  const mat = new THREE.MeshLambertMaterial({ color: 0xb8c8d8, side: THREE.DoubleSide });
+  const mat = new THREE.MeshLambertMaterial({
+    color: 0xb8c8d8,
+    side: THREE.DoubleSide
+  });
+
   terrainMesh = new THREE.Mesh(geo, mat);
   scene.add(terrainMesh);
 
   const traceGeo = new THREE.BufferGeometry();
   const traceVerts = [];
+
   for (const p of pts) {
     const nx = (p.lon - minLon) / (maxLon - minLon || 1);
     const ny = (p.lat - minLat) / (maxLat - minLat || 1);
@@ -179,64 +223,48 @@ function buildScene() {
     const y = ex * elevH + 0.04;
     traceVerts.push(x, y, z);
   }
+
   traceGeo.setAttribute('position', new THREE.Float32BufferAttribute(traceVerts, 3));
-  const traceMat = new THREE.LineBasicMaterial({ color: 0xd44000, linewidth: 2 });
+  const traceMat = new THREE.LineBasicMaterial({ color: 0xd44000 });
   traceMesh = new THREE.Line(traceGeo, traceMat);
   scene.add(traceMesh);
 
   updateCamera();
   updatePlate();
+  pushConfigToParent();
 }
 
 function updateCamera() {
   const rH = rotH * Math.PI / 180;
   const rV = rotV * Math.PI / 180;
   const dist = 9 / zoomVal;
+
   camera.position.set(
     Math.sin(rH) * Math.cos(rV) * dist,
     Math.sin(rV) * dist,
     Math.cos(rH) * Math.cos(rV) * dist
   );
+
   camera.lookAt(0, 0.5, 0);
+  pushConfigToParent();
 }
 
 function updatePlate() {
   document.getElementById('overlay-text').textContent = [txt1, txt2].filter(Boolean).join('  —  ');
+  pushConfigToParent();
 }
 
 function animate() {
-  animId = requestAnimationFrame(animate);
+  requestAnimationFrame(animate);
   renderer.render(scene, camera);
 }
-
-document.getElementById('elev').oninput = function() {
-  elevScale = parseFloat(this.value);
-  document.getElementById('elevVal').textContent = elevScale.toFixed(1) + '×';
-  buildScene();
-};
-document.getElementById('zoom').oninput = function() {
-  zoomVal = parseFloat(this.value);
-  document.getElementById('zoomVal').textContent = zoomVal.toFixed(2) + '×';
-  updateCamera();
-};
-document.getElementById('rotH').oninput = function() {
-  rotH = parseInt(this.value);
-  document.getElementById('rotHVal').textContent = rotH + '°';
-  updateCamera();
-};
-document.getElementById('rotV').oninput = function() {
-  rotV = parseInt(this.value);
-  document.getElementById('rotVVal').textContent = rotV + '°';
-  updateCamera();
-};
-document.getElementById('txt1').oninput = function() { txt1 = this.value; updatePlate(); };
-document.getElementById('txt2').oninput = function() { txt2 = this.value; updatePlate(); };
 
 function parseGPX(text) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'application/xml');
   const trkpts = doc.querySelectorAll('trkpt');
   const pts = [];
+
   trkpts.forEach(pt => {
     const lat = parseFloat(pt.getAttribute('lat'));
     const lon = parseFloat(pt.getAttribute('lon'));
@@ -244,35 +272,122 @@ function parseGPX(text) {
     const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
     if (!isNaN(lat) && !isNaN(lon)) pts.push({ lat, lon, ele });
   });
+
   return pts;
 }
+
+function pushConfigToParent() {
+  const config = {
+    filename,
+    txt1,
+    txt2,
+    elevScale,
+    zoomVal,
+    rotH,
+    rotV
+  };
+
+  window.parent._gpxConfig = config;
+  window.parent.postMessage({ type: 'gpx-config', payload: config }, '*');
+}
+
+document.getElementById('elev').oninput = function() {
+  elevScale = parseFloat(this.value);
+  document.getElementById('elevVal').textContent = elevScale.toFixed(1) + '×';
+  buildScene();
+};
+
+document.getElementById('zoom').oninput = function() {
+  zoomVal = parseFloat(this.value);
+  document.getElementById('zoomVal').textContent = zoomVal.toFixed(2) + '×';
+  updateCamera();
+};
+
+document.getElementById('rotH').oninput = function() {
+  rotH = parseInt(this.value);
+  document.getElementById('rotHVal').textContent = rotH + '°';
+  updateCamera();
+};
+
+document.getElementById('rotV').oninput = function() {
+  rotV = parseInt(this.value);
+  document.getElementById('rotVVal').textContent = rotV + '°';
+  updateCamera();
+};
+
+document.getElementById('txt1').oninput = function() {
+  txt1 = this.value;
+  updatePlate();
+};
+
+document.getElementById('txt2').oninput = function() {
+  txt2 = this.value;
+  updatePlate();
+};
 
 document.getElementById('gpxinput').onchange = function(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  filename = file.name;
   document.getElementById('filename').textContent = file.name;
+
   const reader = new FileReader();
   reader.onload = function(ev) {
     const pts = parseGPX(ev.target.result);
-    if (pts.length > 5) { gpxPoints = pts; buildScene(); }
-    else alert('GPX invalide ou trop peu de points.');
+    if (pts.length > 5) {
+      gpxPoints = pts;
+      buildScene();
+    } else {
+      alert('GPX invalide ou trop peu de points.');
+    }
   };
   reader.readAsText(file);
 };
 
 const dz = document.getElementById('dropzone');
-dz.ondragover = e => { e.preventDefault(); dz.style.background = 'var(--color-background-secondary)'; };
-dz.ondragleave = () => { dz.style.background = ''; };
+dz.ondragover = e => {
+  e.preventDefault();
+  dz.style.background = 'var(--color-background-secondary)';
+};
+dz.ondragleave = () => {
+  dz.style.background = '';
+};
 dz.ondrop = e => {
-  e.preventDefault(); dz.style.background = '';
+  e.preventDefault();
+  dz.style.background = '';
   const file = e.dataTransfer.files[0];
-  if (file) { document.getElementById('gpxinput').files = e.dataTransfer.files; document.getElementById('gpxinput').onchange({ target: { files: [file] } }); }
+  if (file) {
+    document.getElementById('gpxinput').files = e.dataTransfer.files;
+    document.getElementById('gpxinput').onchange({ target: { files: [file] } });
+  }
 };
 
 function sendOrder() {
-  const summary = `Nouvelle commande configurateur:\n- GPX: ${document.getElementById('filename').textContent}\n- Élévation: ${elevScale}×\n- Zoom: ${zoomVal}×\n- Rotation H: ${rotH}°, V: ${rotV}°\n- Plaque ligne 1: "${txt1}"\n- Plaque ligne 2: "${txt2}"`;
-  sendPrompt(summary);
+  const summary =
+`Nouvelle commande configurateur:
+- GPX: ${filename}
+- Élévation: ${elevScale}×
+- Zoom: ${zoomVal}×
+- Rotation H: ${rotH}°
+- Rotation V: ${rotV}°
+- Plaque ligne 1: "${txt1}"
+- Plaque ligne 2: "${txt2}"`;
+
+  alert(summary);
+  pushConfigToParent();
 }
 
-window.addEventListener('load', () => { setTimeout(initThree, 100); });
+window.addEventListener('load', () => {
+  setTimeout(initThree, 100);
+});
+
+window.addEventListener('resize', () => {
+  const wrap = document.getElementById('canvas-wrap');
+  const size = wrap.clientWidth || 600;
+  renderer.setSize(size, size);
+});
 </script>
+
+</body>
+</html>
