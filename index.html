@@ -517,99 +517,97 @@
       return pts;
     }
 
-    function buildTerrainData(points) {
-      const pts = resamplePoints(points, 440);
-      const lats = pts.map(p => p.lat);
-      const lons = pts.map(p => p.lon);
-      const eles = pts.map(p => p.ele);
+function buildTerrainData(points) {
+  const pts = resamplePoints(points, 500);
+  const lats = pts.map(p => p.lat);
+  const lons = pts.map(p => p.lon);
+  const eles = pts.map(p => p.ele);
 
-      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-      const minLon = Math.min(...lons), maxLon = Math.max(...lons);
-      const minEle = Math.min(...eles), maxEle = Math.max(...eles);
-      const eleRange = Math.max(1, maxEle - minEle);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  const minEle = Math.min(...eles), maxEle = Math.max(...eles);
+  const eleRange = Math.max(1, maxEle - minEle);
 
-      const normalizedPath = pts.map((p, i) => {
-        let nx = (p.lon - minLon) / (maxLon - minLon || 1);
-        let ny = (p.lat - minLat) / (maxLat - minLat || 1);
-        nx = 0.5 + (nx - 0.5) * gpxScale;
-        ny = 0.5 + (ny - 0.5) * gpxScale;
-        return {
-          nx,
-          ny,
-          h: (p.ele - minEle) / eleRange,
-          index: i / Math.max(1, pts.length - 1)
-        };
-      });
+  const normalizedPath = pts.map((p, i) => {
+    let nx = (p.lon - minLon) / (maxLon - minLon || 1);
+    let ny = (p.lat - minLat) / (maxLat - minLat || 1);
 
-      const heights = Array.from({ length: GRID }, () => Array(GRID).fill(0));
-      const pathIndexGrid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
-      const corridorGrid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
+    nx = 0.5 + (nx - 0.5) * gpxScale;
+    ny = 0.5 + (ny - 0.5) * gpxScale;
 
-      const ridgeWidth = 0.09;
-      const ridgeWidth2 = 0.18;
+    return {
+      nx,
+      ny,
+      h: (p.ele - minEle) / eleRange,
+      index: i / Math.max(1, pts.length - 1)
+    };
+  });
 
-      for (let gy = 0; gy < GRID; gy++) {
-        for (let gx = 0; gx < GRID; gx++) {
-          const nx = gx / (GRID - 1);
-          const ny = 1 - gy / (GRID - 1);
+  const heights = Array.from({ length: GRID }, () => Array(GRID).fill(0));
+  const corridorGrid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
 
-          let bestD2 = Infinity;
-          let bestHeight = 0;
-          let bestIdx = 0;
-          let corridorVal = 0;
-          let weightedHeight = 0;
-          let totalW = 0;
+  const mainWidth = 0.06;
+  const sideWidth = 0.16;
 
-          for (const p of normalizedPath) {
-            const dx = nx - p.nx;
-            const dy = ny - p.ny;
-            const d2 = dx * dx + dy * dy;
+  for (let gy = 0; gy < GRID; gy++) {
+    for (let gx = 0; gx < GRID; gx++) {
+      const nx = gx / (GRID - 1);
+      const ny = 1 - gy / (GRID - 1);
 
-            if (d2 < bestD2) {
-              bestD2 = d2;
-              bestHeight = p.h;
-              bestIdx = p.index;
-            }
+      let weightedHeight = 0;
+      let totalW = 0;
+      let corridor = 0;
 
-            const d = Math.sqrt(d2);
-            const w = 1 / (d2 + 0.00025);
-            totalW += w;
-            weightedHeight += w * p.h;
+      for (const p of normalizedPath) {
+        const dx = nx - p.nx;
+        const dy = ny - p.ny;
+        const d2 = dx * dx + dy * dy;
+        const d = Math.sqrt(d2);
 
-            corridorVal = Math.max(corridorVal, Math.exp(-(d * d) / (2 * ridgeWidth * ridgeWidth)));
-            corridorVal += 0.22 * Math.exp(-(d * d) / (2 * ridgeWidth2 * ridgeWidth2));
-          }
+        const w = 1 / (d2 + 0.00008);
+        totalW += w;
+        weightedHeight += w * p.h;
 
-          corridorVal = clamp(corridorVal, 0, 1.25);
-          const smoothPathElev = weightedHeight / totalW;
+        const near = Math.exp(-(d * d) / (2 * mainWidth * mainWidth));
+        const far = Math.exp(-(d * d) / (2 * sideWidth * sideWidth));
 
-          const cx = nx - 0.5;
-          const cy = ny - 0.5;
-          const radial = Math.sqrt(cx * cx + cy * cy);
-          const massif = Math.pow(clamp(1 - radial / 0.72, 0, 1), 1.45);
-          const edgeDrop = Math.pow(clamp(1 - radial / 0.92, 0, 1), 1.9);
-          const ridge = corridorVal * (0.45 + 0.55 * smoothPathElev);
-          const shoulders = Math.pow(corridorVal, 0.6) * ridgeStrength * 0.55;
-          const baseMass = massif * (0.26 + 0.42 * ridgeStrength);
-          let h = Math.max(bestHeight * 0.55 + smoothPathElev * 0.45, ridge * 0.78 + shoulders + baseMass);
-          h *= edgeDrop;
-
-          heights[gy][gx] = h;
-          pathIndexGrid[gy][gx] = bestIdx;
-          corridorGrid[gy][gx] = corridorVal;
-        }
+        corridor = Math.max(corridor, near + 0.45 * far);
       }
 
-      const smoothHeights = smoothGrid(heights, 2);
-      for (let gy = 0; gy < GRID; gy++) {
-        for (let gx = 0; gx < GRID; gx++) {
-          const blend = corridorGrid[gy][gx];
-          heights[gy][gx] = lerp(smoothHeights[gy][gx], Math.max(smoothHeights[gy][gx], heights[gy][gx]), clamp(blend * 0.85, 0, 1));
-        }
-      }
+      const pathHeight = weightedHeight / totalW;
 
-      return { pts, normalizedPath, heights, pathIndexGrid, corridorGrid, minEle, maxEle, eleRange };
+      const borderFalloffX = smoothstep(0.0, 0.08, nx) * (1 - smoothstep(0.92, 1.0, nx));
+      const borderFalloffY = smoothstep(0.0, 0.08, ny) * (1 - smoothstep(0.92, 1.0, ny));
+      const borderFalloff = Math.min(borderFalloffX, borderFalloffY);
+
+      let h = pathHeight * Math.min(corridor, 1.0);
+      h += Math.pow(Math.min(corridor, 1.0), 1.35) * ridgeStrength * 0.22;
+      h *= borderFalloff;
+
+      heights[gy][gx] = h;
+      corridorGrid[gy][gx] = corridor;
     }
+  }
+
+  const smoothHeights = smoothGrid(heights, 2);
+
+  for (let gy = 0; gy < GRID; gy++) {
+    for (let gx = 0; gx < GRID; gx++) {
+      const c = Math.min(corridorGrid[gy][gx], 1.0);
+      heights[gy][gx] = smoothHeights[gy][gx] * (1 - c * 0.35) + heights[gy][gx] * (c * 0.35);
+    }
+  }
+
+  return {
+    pts,
+    normalizedPath,
+    heights,
+    corridorGrid,
+    minEle,
+    maxEle,
+    eleRange
+  };
+}
 
     function gridHeightAt(nx, ny) {
       if (!terrainData) return 0;
@@ -743,35 +741,96 @@
       return new THREE.Mesh(geo, mat);
     }
 
-    function buildPathMesh(elevH) {
-      const pathPoints = terrainData.normalizedPath.map(p => {
-        const x = (p.nx - 0.5) * SIZE;
-        const z = (0.5 - p.ny) * SIZE;
-        const y = gridHeightAt(p.nx, p.ny) * elevH + traceHeight / 2;
-        return new THREE.Vector3(x, y, z);
-      });
+   function buildPathMesh(elevH) {
+  const pathPoints = terrainData.normalizedPath.map(p => {
+    const x = (p.nx - 0.5) * SIZE;
+    const z = (0.5 - p.ny) * SIZE;
+    const y = gridHeightAt(p.nx, p.ny) * elevH;
+    return new THREE.Vector3(x, y, z);
+  });
 
-      const reduced = [];
-      const step = Math.max(1, Math.floor(pathPoints.length / 220));
-      for (let i = 0; i < pathPoints.length; i += step) reduced.push(pathPoints[i]);
-      if (reduced[reduced.length - 1] !== pathPoints[pathPoints.length - 1]) reduced.push(pathPoints[pathPoints.length - 1]);
+  const reduced = [];
+  const step = Math.max(1, Math.floor(pathPoints.length / 240));
+  for (let i = 0; i < pathPoints.length; i += step) {
+    reduced.push(pathPoints[i]);
+  }
+  if (reduced[reduced.length - 1] !== pathPoints[pathPoints.length - 1]) {
+    reduced.push(pathPoints[pathPoints.length - 1]);
+  }
 
-      const curve = new THREE.CatmullRomCurve3(reduced);
-      const radius = traceWidth / 2;
-      const tubularSegments = Math.max(160, reduced.length * 5);
-      const radialSegments = 10;
-      const geo = new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, false);
+  const positions = [];
+  const indices = [];
 
-      const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(traceColor),
-        roughness: 0.55,
-        metalness: 0.06
-      });
+  for (let i = 0; i < reduced.length; i++) {
+    const p = reduced[i];
 
-      pathMesh = new THREE.Mesh(geo, mat);
-      pathMesh.receiveShadow = true;
-      scene.add(pathMesh);
-    }
+    const prev = reduced[Math.max(0, i - 1)];
+    const next = reduced[Math.min(reduced.length - 1, i + 1)];
+
+    const dir = new THREE.Vector3().subVectors(next, prev);
+    dir.y = 0;
+    dir.normalize();
+
+    const normal = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+    const halfW = traceWidth / 2;
+
+    const leftBottom = p.clone().addScaledVector(normal, halfW);
+    const rightBottom = p.clone().addScaledVector(normal, -halfW);
+
+    const leftTop = leftBottom.clone();
+    const rightTop = rightBottom.clone();
+    leftTop.y += traceHeight;
+    rightTop.y += traceHeight;
+
+    positions.push(
+      leftBottom.x, leftBottom.y, leftBottom.z,
+      rightBottom.x, rightBottom.y, rightBottom.z,
+      leftTop.x, leftTop.y, leftTop.z,
+      rightTop.x, rightTop.y, rightTop.z
+    );
+  }
+
+  for (let i = 0; i < reduced.length - 1; i++) {
+    const a = i * 4;
+    const b = a + 4;
+
+    // dessus
+    indices.push(a + 2, a + 3, b + 2);
+    indices.push(b + 2, a + 3, b + 3);
+
+    // côté gauche
+    indices.push(a + 0, a + 2, b + 0);
+    indices.push(b + 0, a + 2, b + 2);
+
+    // côté droit
+    indices.push(a + 3, a + 1, b + 3);
+    indices.push(b + 3, a + 1, b + 1);
+  }
+
+  // face avant
+  indices.push(0, 1, 2);
+  indices.push(2, 1, 3);
+
+  // face arrière
+  const n = (reduced.length - 1) * 4;
+  indices.push(n + 2, n + 1, n + 0);
+  indices.push(n + 3, n + 1, n + 2);
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(traceColor),
+    roughness: 0.55,
+    metalness: 0.04
+  });
+
+  pathMesh = new THREE.Mesh(geo, mat);
+  pathMesh.receiveShadow = true;
+  scene.add(pathMesh);
+}
 
     function updateCamera() {
       const rH = rotH * Math.PI / 180;
