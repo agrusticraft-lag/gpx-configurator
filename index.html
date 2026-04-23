@@ -1,0 +1,278 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+#app { display: grid; grid-template-columns: 1fr 340px; gap: 24px; padding: 1rem 0; min-height: 600px; }
+#canvas-wrap { position: relative; aspect-ratio: 1; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+canvas { display: block; }
+#controls { display: flex; flex-direction: column; gap: 16px; }
+.ctrl-block { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+.ctrl-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; letter-spacing: 0.04em; }
+.ctrl-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 12px; }
+.row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.row label { font-size: 13px; color: var(--color-text-secondary); min-width: 90px; }
+.row span { font-size: 13px; font-weight: 500; color: var(--color-text-primary); min-width: 36px; text-align: right; }
+input[type=range] { flex: 1; }
+input[type=text] { width: 100%; font-size: 13px; padding: 6px 10px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-secondary); color: var(--color-text-primary); }
+.upload-zone { border: 1px dashed var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 24px; text-align: center; cursor: pointer; transition: background 0.15s; }
+.upload-zone:hover { background: var(--color-background-secondary); }
+.upload-zone p { font-size: 13px; color: var(--color-text-secondary); margin-top: 6px; }
+.upload-zone strong { font-size: 14px; color: var(--color-text-primary); }
+.btn-order { width: 100%; padding: 12px; background: var(--color-text-primary); color: var(--color-background-primary); border: none; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+.btn-order:hover { opacity: 0.85; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--color-background-info); color: var(--color-text-info); }
+#filename { font-size: 12px; color: var(--color-text-secondary); margin-top: 6px; text-align: center; }
+#overlay-text { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 11px; color: rgba(180,180,180,0.9); letter-spacing: 0.06em; pointer-events: none; font-family: var(--font-sans); }
+</style>
+
+<div id="app">
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div id="overlay-text" id="plate-text"></div>
+  </div>
+
+  <div id="controls">
+    <div class="ctrl-block">
+      <div class="ctrl-title">Fichier GPX <span class="badge">étape 1</span></div>
+      <div class="upload-zone" id="dropzone" onclick="document.getElementById('gpxinput').click()">
+        <strong>Glisser le GPX ici</strong>
+        <p>ou cliquer pour sélectionner</p>
+      </div>
+      <input type="file" id="gpxinput" accept=".gpx" style="display:none">
+      <div id="filename">Aucun fichier — démonstration active</div>
+    </div>
+
+    <div class="ctrl-block">
+      <div class="ctrl-title">Paramètres 3D <span class="badge">étape 2</span></div>
+      <div class="row">
+        <label>Élévation ×</label>
+        <input type="range" id="elev" min="1" max="10" step="0.5" value="3">
+        <span id="elevVal">3×</span>
+      </div>
+      <div class="row">
+        <label>Zoom</label>
+        <input type="range" id="zoom" min="0.5" max="2" step="0.05" value="1">
+        <span id="zoomVal">1×</span>
+      </div>
+      <div class="row">
+        <label>Rotation H</label>
+        <input type="range" id="rotH" min="-180" max="180" step="1" value="-30">
+        <span id="rotHVal">-30°</span>
+      </div>
+      <div class="row">
+        <label>Rotation V</label>
+        <input type="range" id="rotV" min="10" max="80" step="1" value="35">
+        <span id="rotVVal">35°</span>
+      </div>
+    </div>
+
+    <div class="ctrl-block">
+      <div class="ctrl-title">Plaque <span class="badge">étape 3</span></div>
+      <div class="ctrl-label">Ligne 1</div>
+      <input type="text" id="txt1" value="Patrouille des Glaciers" style="margin-bottom:8px">
+      <div class="ctrl-label">Ligne 2</div>
+      <input type="text" id="txt2" value="57.5km · 4380m D+">
+    </div>
+
+    <button class="btn-order" onclick="sendOrder()">Commander → ↗</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const DEMO_POINTS = (() => {
+  const pts = [];
+  let lat = 46.00, lon = 7.50;
+  for (let i = 0; i < 300; i++) {
+    lat += (Math.random() - 0.3) * 0.008;
+    lon += 0.003 + (Math.random() - 0.5) * 0.004;
+    const baseElev = 2200 + Math.sin(i * 0.12) * 600 + Math.sin(i * 0.05) * 800;
+    pts.push({ lat, lon, ele: baseElev + Math.random() * 80 });
+  }
+  return pts;
+})();
+
+let gpxPoints = DEMO_POINTS;
+let elevScale = 3, zoomVal = 1, rotH = -30, rotV = 35;
+let txt1 = 'Patrouille des Glaciers', txt2 = '57.5km · 4380m D+';
+let renderer, scene, camera, terrainMesh, traceMesh, animId;
+
+function initThree() {
+  const wrap = document.getElementById('canvas-wrap');
+  const size = wrap.clientWidth;
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(size, size);
+  renderer.setClearColor(0x000000, 0);
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+
+  const ambLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(2, 4, 3);
+  scene.add(dirLight);
+  const fillLight = new THREE.DirectionalLight(0xaabbdd, 0.3);
+  fillLight.position.set(-2, 1, -2);
+  scene.add(fillLight);
+
+  buildScene();
+  animate();
+}
+
+function buildScene() {
+  if (terrainMesh) scene.remove(terrainMesh);
+  if (traceMesh) scene.remove(traceMesh);
+
+  const pts = gpxPoints;
+  const lats = pts.map(p => p.lat), lons = pts.map(p => p.lon), eles = pts.map(p => p.ele);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  const minEle = Math.min(...eles), maxEle = Math.max(...eles);
+  const eleRange = maxEle - minEle || 1;
+
+  const GRID = 80;
+  const SIZE = 5;
+
+  function sampleElevation(nx, ny) {
+    let totalW = 0, totalE = 0;
+    for (const p of pts) {
+      const px = (p.lon - minLon) / (maxLon - minLon || 1);
+      const py = (p.lat - minLat) / (maxLat - minLat || 1);
+      const dx = nx - px, dy = ny - py;
+      const d2 = dx * dx + dy * dy;
+      const w = 1 / (d2 + 0.0004);
+      totalW += w;
+      totalE += w * (p.ele - minEle) / eleRange;
+    }
+    return totalE / totalW;
+  }
+
+  const geo = new THREE.PlaneGeometry(SIZE, SIZE, GRID - 1, GRID - 1);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  const elevH = (SIZE * 0.35) * (elevScale / 3);
+
+  for (let iy = 0; iy < GRID; iy++) {
+    for (let ix = 0; ix < GRID; ix++) {
+      const idx = iy * GRID + ix;
+      const nx = ix / (GRID - 1), ny = 1 - iy / (GRID - 1);
+      const e = sampleElevation(nx, ny);
+      pos.setY(idx, e * elevH);
+    }
+  }
+  geo.computeVertexNormals();
+
+  const mat = new THREE.MeshLambertMaterial({ color: 0xb8c8d8, side: THREE.DoubleSide });
+  terrainMesh = new THREE.Mesh(geo, mat);
+  scene.add(terrainMesh);
+
+  const traceGeo = new THREE.BufferGeometry();
+  const traceVerts = [];
+  for (const p of pts) {
+    const nx = (p.lon - minLon) / (maxLon - minLon || 1);
+    const ny = (p.lat - minLat) / (maxLat - minLat || 1);
+    const ex = sampleElevation(nx, ny);
+    const x = (nx - 0.5) * SIZE;
+    const z = (0.5 - ny) * SIZE;
+    const y = ex * elevH + 0.04;
+    traceVerts.push(x, y, z);
+  }
+  traceGeo.setAttribute('position', new THREE.Float32BufferAttribute(traceVerts, 3));
+  const traceMat = new THREE.LineBasicMaterial({ color: 0xd44000, linewidth: 2 });
+  traceMesh = new THREE.Line(traceGeo, traceMat);
+  scene.add(traceMesh);
+
+  updateCamera();
+  updatePlate();
+}
+
+function updateCamera() {
+  const rH = rotH * Math.PI / 180;
+  const rV = rotV * Math.PI / 180;
+  const dist = 9 / zoomVal;
+  camera.position.set(
+    Math.sin(rH) * Math.cos(rV) * dist,
+    Math.sin(rV) * dist,
+    Math.cos(rH) * Math.cos(rV) * dist
+  );
+  camera.lookAt(0, 0.5, 0);
+}
+
+function updatePlate() {
+  document.getElementById('overlay-text').textContent = [txt1, txt2].filter(Boolean).join('  —  ');
+}
+
+function animate() {
+  animId = requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+document.getElementById('elev').oninput = function() {
+  elevScale = parseFloat(this.value);
+  document.getElementById('elevVal').textContent = elevScale.toFixed(1) + '×';
+  buildScene();
+};
+document.getElementById('zoom').oninput = function() {
+  zoomVal = parseFloat(this.value);
+  document.getElementById('zoomVal').textContent = zoomVal.toFixed(2) + '×';
+  updateCamera();
+};
+document.getElementById('rotH').oninput = function() {
+  rotH = parseInt(this.value);
+  document.getElementById('rotHVal').textContent = rotH + '°';
+  updateCamera();
+};
+document.getElementById('rotV').oninput = function() {
+  rotV = parseInt(this.value);
+  document.getElementById('rotVVal').textContent = rotV + '°';
+  updateCamera();
+};
+document.getElementById('txt1').oninput = function() { txt1 = this.value; updatePlate(); };
+document.getElementById('txt2').oninput = function() { txt2 = this.value; updatePlate(); };
+
+function parseGPX(text) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'application/xml');
+  const trkpts = doc.querySelectorAll('trkpt');
+  const pts = [];
+  trkpts.forEach(pt => {
+    const lat = parseFloat(pt.getAttribute('lat'));
+    const lon = parseFloat(pt.getAttribute('lon'));
+    const eleEl = pt.querySelector('ele');
+    const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
+    if (!isNaN(lat) && !isNaN(lon)) pts.push({ lat, lon, ele });
+  });
+  return pts;
+}
+
+document.getElementById('gpxinput').onchange = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('filename').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const pts = parseGPX(ev.target.result);
+    if (pts.length > 5) { gpxPoints = pts; buildScene(); }
+    else alert('GPX invalide ou trop peu de points.');
+  };
+  reader.readAsText(file);
+};
+
+const dz = document.getElementById('dropzone');
+dz.ondragover = e => { e.preventDefault(); dz.style.background = 'var(--color-background-secondary)'; };
+dz.ondragleave = () => { dz.style.background = ''; };
+dz.ondrop = e => {
+  e.preventDefault(); dz.style.background = '';
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('gpxinput').files = e.dataTransfer.files; document.getElementById('gpxinput').onchange({ target: { files: [file] } }); }
+};
+
+function sendOrder() {
+  const summary = `Nouvelle commande configurateur:\n- GPX: ${document.getElementById('filename').textContent}\n- Élévation: ${elevScale}×\n- Zoom: ${zoomVal}×\n- Rotation H: ${rotH}°, V: ${rotV}°\n- Plaque ligne 1: "${txt1}"\n- Plaque ligne 2: "${txt2}"`;
+  sendPrompt(summary);
+}
+
+window.addEventListener('load', () => { setTimeout(initThree, 100); });
+</script>
