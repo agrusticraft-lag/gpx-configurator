@@ -718,10 +718,13 @@ async function buildScene(){
   ['north','south','west','east'].forEach(s=>terrainGroup.add(buildSide(s,elevH,baseY,sideMat)));
 
   // — Fond —
-  terrainGroup.add(Object.assign(new THREE.Mesh(
-    new THREE.BoxGeometry(SIZE,.001,SIZE),
-    new THREE.MeshStandardMaterial({color:0xe8e0d0})
-  ),{position:new THREE.Vector3(0,baseY-.0005,0)}));
+const bottomMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(SIZE, .001, SIZE),
+  new THREE.MeshStandardMaterial({ color: 0xe8e0d0 })
+);
+
+bottomMesh.position.set(0, baseY - .0005, 0);
+terrainGroup.add(bottomMesh);
 
   // — Bord chanfrein —
   const bevelMesh = new THREE.Mesh(
