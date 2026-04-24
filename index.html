@@ -284,7 +284,23 @@ async function loadHeightmap(bbox){
 
   const zoom = 14; // précision (10-14 ok)
   const size = 128;
+  
+function tileToBounds(x, y, z) {
+  const n = Math.pow(2, z);
 
+  const lon1 = x / n * 360 - 180;
+  const lon2 = (x + 1) / n * 360 - 180;
+
+  const lat1 = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI;
+  const lat2 = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 1) / n))) * 180 / Math.PI;
+
+  return {
+    minLat: lat2,
+    maxLat: lat1,
+    minLon: lon1,
+    maxLon: lon2
+  };
+}
   // centre bbox
   const lat = (bbox.minLat + bbox.maxLat) / 2;
   const lon = (bbox.minLon + bbox.maxLon) / 2;
@@ -300,7 +316,7 @@ async function loadHeightmap(bbox){
   }
 
   const tile = latLonToTile(lat, lon, zoom);
-
+  const terrainBounds = tileToBounds(tile.x, tile.y, zoom);
   const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
 
   const url = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${zoom}/${tile.x}/${tile.y}.pngraw?access_token=${token}`;
@@ -365,6 +381,7 @@ async function loadHeightmap(bbox){
     maxEle: maxE,
     eleRange: range,
     mode: 'real-mapbox'
+    bounds: terrainBounds,
   };
 }
 
@@ -788,10 +805,12 @@ $('loadBtn').addEventListener('click', async function(){
     // ──────────────────────────────────────────────────────────
 
     // Normaliser le chemin sur la bbox (coordonnées 0-1)
-    normalizedPath = r500.map(p=>({
-      nx: (p.lon-gpxBBox.minLon)/(gpxBBox.maxLon-gpxBBox.minLon||1),
-      ny: (p.lat-gpxBBox.minLat)/(gpxBBox.maxLat-gpxBBox.minLat||1),
-    }));
+const pathBounds = heightmapCache.bounds || gpxBBox;
+
+normalizedPath = r500.map(p => ({
+  nx: (p.lon - pathBounds.minLon) / (pathBounds.maxLon - pathBounds.minLon || 1),
+  ny: (p.lat - pathBounds.minLat) / (pathBounds.maxLat - pathBounds.minLat || 1),
+}));
 
     buildScene();
 
