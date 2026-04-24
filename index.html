@@ -409,14 +409,30 @@ function buildFallbackHeightmap(pts, bbox){
 
 // ── Lecture hauteur à position normalisée ────────────────────
 function sampleH(nx, ny){
-  if(!heightmapCache) return 0;
-  const x=clamp(nx,0,1)*(GRID-1), y=clamp(1-ny,0,1)*(GRID-1);
-  const x0=Math.floor(x),x1=Math.min(GRID-1,x0+1);
-  const y0=Math.floor(y),y1=Math.min(GRID-1,y0+1);
-  const tx=x-x0, ty=y-y0;
+  if(!heightmapCache || !heightmapCache.heights) return 0;
+
+  const nxClamped = clamp(nx, 0, 1);
+  const nyClamped = clamp(ny, 0, 1);
+
+  const x = nxClamped * (GRID - 1);
+  const y = (1 - nyClamped) * (GRID - 1);
+
+  const x0 = Math.floor(x);
+  const x1 = Math.min(GRID - 1, x0 + 1);
+  const y0 = Math.floor(y);
+  const y1 = Math.min(GRID - 1, y0 + 1);
+
+  const row0 = heightmapCache.heights[y0];
+  const row1 = heightmapCache.heights[y1];
+
+  if(!row0 || !row1) return 0;
+
+  const tx = x - x0;
+  const ty = y - y0;
+
   return lerp(
-    lerp(heightmapCache.heights[y0][x0],heightmapCache.heights[y0][x1],tx),
-    lerp(heightmapCache.heights[y1][x0],heightmapCache.heights[y1][x1],tx),
+    lerp(row0[x0], row0[x1], tx),
+    lerp(row1[x0], row1[x1], tx),
     ty
   );
 }
@@ -808,8 +824,8 @@ $('loadBtn').addEventListener('click', async function(){
 const pathBounds = heightmapCache.bounds || gpxBBox;
 
 normalizedPath = r500.map(p => ({
-  nx: (p.lon - pathBounds.minLon) / (pathBounds.maxLon - pathBounds.minLon || 1),
-  ny: (p.lat - pathBounds.minLat) / (pathBounds.maxLat - pathBounds.minLat || 1),
+  nx: clamp((p.lon - gpxBBox.minLon) / (gpxBBox.maxLon - gpxBBox.minLon || 1), 0, 1),
+  ny: clamp((p.lat - gpxBBox.minLat) / (gpxBBox.maxLat - gpxBBox.minLat || 1), 0, 1),
 }));
 
     buildScene();
