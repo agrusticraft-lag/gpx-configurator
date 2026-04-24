@@ -283,7 +283,7 @@ function smoothGrid(g, passes=3){
 async function loadHeightmap(bbox){
 
   const zoom = 14; // précision (10-14 ok)
-  const size = 128;
+  const size = GRID;
   
 function tileToBounds(x, y, z) {
   const n = Math.pow(2, z);
