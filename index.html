@@ -187,7 +187,7 @@ const GRID    = 256;
 const SIZE    = 6.0;
 const REAL_MM = 150;
 const FETCH_G = 22;    // 22×22 = 484 points → 5 batches
-  const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
+  const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
 
 let gpxPoints      = null;
 let gpxBBox        = null;
@@ -317,7 +317,7 @@ function tileToBounds(x, y, z) {
 
   const tile = latLonToTile(lat, lon, zoom);
   const terrainBounds = tileToBounds(tile.x, tile.y, zoom);
-  const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
+  const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
 
   const url = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${zoom}/${tile.x}/${tile.y}.pngraw?access_token=${token}`;
 
