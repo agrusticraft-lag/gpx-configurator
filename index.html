@@ -1,932 +1,1119 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Configurateur GPX 3D Premium — Localisation GPS & modélisation montagne</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Relief3D — Configurateur terrain GPX</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#f5f7fb; --panel:#fff; --panel2:#eef2f7; --text:#111827; --muted:#6b7280;
-      --border:#d6dde8; --accent:#111827; --pill:#eef4ff; --pillText:#2952cc;
-      --r1:12px; --r2:18px; --shadow:0 10px 24px rgba(17,24,39,.07);
+    :root {
+      --ink: #1a1a18;
+      --ink2: #4a4a44;
+      --ink3: #8a8a80;
+      --bg: #f7f5f0;
+      --bg2: #efede8;
+      --bg3: #e5e3dc;
+      --line: rgba(26,26,24,.12);
+      --accent: #2c5f2e;
+      --accent2: #d4500a;
+      --r: 6px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
     }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:Inter,Arial,Helvetica,sans-serif;color:var(--text);
-      background:linear-gradient(180deg,#fff 0%,var(--bg) 100%);padding:24px;
+    * { box-sizing: border-box; margin: 0; padding: 0 }
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
     }
-    #app{
-      max-width:1500px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;
+    #header {
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
+      background: var(--bg);
     }
-    #viewer{
-      position:relative;aspect-ratio:1;border:1px solid var(--border);border-radius:var(--r2);
-      overflow:hidden;background:radial-gradient(circle at 50% 35%,#fafbfd 0%,#eef2f7 60%,#e5ebf4 100%);
-      box-shadow:var(--shadow);min-height:640px;
+    #header h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -.01em;
     }
-    canvas{display:block;width:100%;height:100%}
-    #status{
-      position:absolute;top:14px;left:14px;z-index:3;padding:8px 12px;border-radius:999px;
-      border:1px solid rgba(0,0,0,.08);background:rgba(255,255,255,.95);font-size:12px;color:#374151;
-      box-shadow:0 8px 18px rgba(17,24,39,.08);
+    #header .sub {
+      font-size: 11px;
+      color: var(--ink3);
+      letter-spacing: .06em;
+      text-transform: uppercase;
     }
-    #plateOverlay{
-      position:absolute;bottom:16px;left:0;right:0;z-index:2;text-align:center;padding:0 20px;
-      font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(98,105,114,.96);
-      text-shadow:0 1px 0 rgba(255,255,255,.75);pointer-events:none;line-height:1.6;
+    #app {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) 340px;
+      height: calc(100vh - 57px);
     }
-    #controls{display:flex;flex-direction:column;gap:16px}
-    .card{
-      background:var(--panel);border:1px solid var(--border);border-radius:var(--r2);
-      padding:18px;box-shadow:var(--shadow);
+    #viewer {
+      position: relative;
+      background: #e8e6e0;
+      overflow: hidden;
     }
-    .title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin-bottom:14px}
-    .badge{
-      font-size:11px;font-weight:700;background:var(--pill);color:var(--pillText);
-      padding:3px 8px;border-radius:999px;
+    canvas { display: block; width: 100%; height: 100%; }
+    #status {
+      position: absolute;
+      top: 14px; left: 14px;
+      background: rgba(247,245,240,.93);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 11px;
+      padding: 6px 12px;
+      color: var(--ink2);
+      letter-spacing: .03em;
     }
-    .label{font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
-    .upload{
-      border:1px dashed #b8c2d1;border-radius:var(--r1);padding:24px;text-align:center;cursor:pointer;
-      background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);transition:.15s ease;
+    #plateOverlay {
+      position: absolute;
+      bottom: 20px; left: 0; right: 0;
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(80,70,60,.85);
+      text-shadow: 0 1px 0 rgba(255,255,255,.5);
+      pointer-events: none;
+      line-height: 1.7;
     }
-    .upload:hover{background:var(--panel2);transform:translateY(-1px)}
-    .upload strong{font-size:14px}
-    .upload p,.meta,.helper,.stats{font-size:12px;color:var(--muted)}
-    .meta,.stats{margin-top:8px;text-align:center;line-height:1.45}
-    .row{
-      display:grid;grid-template-columns:102px 1fr 62px;gap:10px;align-items:center;margin-bottom:12px;
+    #sidebar {
+      border-left: 1px solid var(--line);
+      overflow-y: auto;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
     }
-    .row label{font-size:13px;color:var(--muted)}
-    .row span{font-size:13px;font-weight:700;text-align:right}
-    input[type=range]{width:100%}
-    input[type=text], select{
-      width:100%;padding:9px 11px;font-size:13px;border:1px solid var(--border);background:var(--panel2);
-      color:var(--text);border-radius:var(--r1);outline:none;
+    .section {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
     }
-    .btnPrimary,.btnSecondary{
-      width:100%;padding:14px;border:none;border-radius:var(--r1);font-weight:700;font-size:14px;cursor:pointer;
-      transition:.15s ease;
+    .section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--ink3);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .btnPrimary{background:#111827;color:#fff;box-shadow:0 12px 24px rgba(17,24,39,.18)}
-    .btnSecondary{background:#e8edf5;color:#111827;border:1px solid var(--border);margin-top:12px}
-    .btnPrimary:hover,.btnSecondary:hover{opacity:.92;transform:translateY(-1px)}
-    .btnPrimary:disabled,.btnSecondary:disabled{opacity:.6;cursor:not-allowed;transform:none}
-    .note{
-      margin-top:10px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px solid var(--border);
-      font-size:12px;color:var(--muted);line-height:1.55;
+    .section-title .step {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px;
+      flex-shrink: 0;
     }
-    @media (max-width:1040px){
-      #app{grid-template-columns:1fr}
-      #viewer{min-height:520px}
+    .dropzone {
+      border: 1px dashed var(--bg3);
+      border-radius: var(--r);
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--bg2);
+      transition: .15s;
+    }
+    .dropzone:hover { background: var(--bg3); border-color: var(--ink3); }
+    .dropzone .icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+      display: block;
+      font-family: sans-serif;
+    }
+    .dropzone strong { font-size: 12px; display: block; margin-bottom: 4px; }
+    .dropzone p { font-size: 11px; color: var(--ink3); }
+    .file-info {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: var(--bg2);
+      border-radius: var(--r);
+      font-size: 11px;
+      color: var(--ink2);
+      line-height: 1.5;
+    }
+    .file-info strong { color: var(--ink); }
+    .row {
+      display: grid;
+      grid-template-columns: 100px 1fr 52px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .row label { font-size: 11px; color: var(--ink3); }
+    .row .val { font-size: 11px; text-align: right; color: var(--ink2); }
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 3px;
+      background: var(--bg3);
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--ink);
+      cursor: pointer;
+    }
+    input[type=text], select {
+      width: 100%;
+      padding: 8px 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      border: 1px solid var(--line);
+      background: var(--bg2);
+      color: var(--ink);
+      border-radius: var(--r);
+      outline: none;
+      margin-bottom: 8px;
+    }
+    input[type=text]:focus, select:focus {
+      border-color: var(--accent);
+    }
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: var(--r);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: .04em;
+      transition: .15s;
+    }
+    .btn-primary {
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .btn-primary:hover { background: #333; }
+    .btn-secondary {
+      background: var(--bg2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      margin-top: 8px;
+    }
+    .btn-secondary:hover { background: var(--bg3); }
+    .btn-stl {
+      background: var(--accent);
+      color: #fff;
+      margin-top: 8px;
+    }
+    .btn-stl:hover { background: #234f25; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .note {
+      font-size: 10px;
+      color: var(--ink3);
+      line-height: 1.6;
+      padding: 8px 10px;
+      background: var(--bg2);
+      border-radius: var(--r);
+      margin-top: 10px;
+    }
+    .note b { color: var(--ink2); }
+    #progressWrap {
+      display: none;
+      margin-top: 10px;
+    }
+    #progressBar {
+      height: 3px;
+      background: var(--bg3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #progressFill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width .3s;
+    }
+    #progressLabel {
+      font-size: 10px;
+      color: var(--ink3);
+      margin-top: 5px;
+    }
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .color-opt {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: .12s;
+    }
+    .color-opt.active { border-color: var(--ink); }
+    @media (max-width: 900px) {
+      #app { grid-template-columns: 1fr; height: auto; }
+      #viewer { height: 65vw; min-height: 320px; }
+      #sidebar { height: auto; }
     }
   </style>
 </head>
 <body>
-  <div id="app">
-    <div id="viewer">
-      <div id="status">Démo chargée</div>
-      <canvas id="c"></canvas>
-      <div id="plateOverlay"></div>
-    </div>
 
-    <div id="controls">
-      <div class="card">
-        <div class="title">Fichier GPX <span class="badge">étape 1</span></div>
+<div id="header">
+  <h1>Relief3D</h1>
+  <span class="sub">Configurateur terrain alpin</span>
+</div>
 
-        <div class="upload" id="dropzone">
-          <strong>Choisir un fichier GPX</strong>
-          <p>ou glisser-déposer ici</p>
-        </div>
-        <input type="file" id="gpxinput" accept=".gpx" style="display:none">
-
-        <div id="filename" class="meta">Aucun fichier sélectionné</div>
-        <div id="gpxStats" class="stats">Distance: — · D+: — · D−: —</div>
-
-        <button class="btnSecondary" id="previewBtn">Aperçu du relief</button>
-
-        <div class="note">
-          <strong>Mode montagne premium :</strong> le GPX sert à localiser la zone GPS.
-          Le code est prêt pour une vraie source terrain externe via la fonction
-          <code>fetchRealTerrainGridFromProvider</code>. Sans backend/API branché, il utilise un fallback local fidèle au profil GPX.
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="title">Relief <span class="badge">étape 2</span></div>
-
-        <div class="row">
-          <label>Élévation</label>
-          <input type="range" id="elev" min="1" max="10" step="0.5" value="4">
-          <span id="elevVal">4.0×</span>
-        </div>
-
-        <div class="row">
-          <label>Emprise GPS</label>
-          <input type="range" id="gpxScale" min="0.70" max="1.40" step="0.01" value="1.02">
-          <span id="gpxScaleVal">1.02×</span>
-        </div>
-
-        <div class="row">
-          <label>Marge zone</label>
-          <input type="range" id="terrainMargin" min="0.05" max="0.60" step="0.01" value="0.22">
-          <span id="terrainMarginVal">22%</span>
-        </div>
-
-        <div class="row">
-          <label>Base</label>
-          <input type="range" id="baseThickness" min="0.20" max="1.20" step="0.05" value="0.48">
-          <span id="baseThicknessVal">0.48</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="title">Vue <span class="badge">étape 3</span></div>
-
-        <div class="row">
-          <label>Zoom vue</label>
-          <input type="range" id="zoom" min="0.55" max="1.8" step="0.01" value="1.00">
-          <span id="zoomVal">1.00×</span>
-        </div>
-
-        <div class="row">
-          <label>Rotation H</label>
-          <input type="range" id="rotH" min="-180" max="180" step="1" value="-30">
-          <span id="rotHVal">-30°</span>
-        </div>
-
-        <div class="row">
-          <label>Rotation V</label>
-          <input type="range" id="rotV" min="10" max="80" step="1" value="38">
-          <span id="rotVVal">38°</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="title">Chemin <span class="badge">étape 4</span></div>
-
-        <div class="row">
-          <label>Largeur</label>
-          <input type="range" id="traceWidth" min="0.03" max="0.20" step="0.005" value="0.080">
-          <span id="traceWidthVal">0.080</span>
-        </div>
-
-        <div class="row">
-          <label>Hauteur</label>
-          <input type="range" id="traceHeight" min="0.02" max="0.25" step="0.005" value="0.080">
-          <span id="traceHeightVal">0.080</span>
-        </div>
-
-        <div class="row">
-          <label>Couleur</label>
-          <select id="traceColor">
-            <option value="#d44000">Orange alpin</option>
-            <option value="#d11c1c">Rouge</option>
-            <option value="#f2cc00">Jaune</option>
-            <option value="#ffffff">Blanc</option>
-            <option value="#1f62ff">Bleu</option>
-          </select>
-          <span></span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="title">Plaque <span class="badge">étape 5</span></div>
-        <div class="label">Ligne 1</div>
-        <input type="text" id="txt1" value="Patrouille des Glaciers" style="margin-bottom:10px">
-        <div class="label">Ligne 2</div>
-        <input type="text" id="txt2" value="57.5 km · 4380 m D+">
-        <div class="helper" style="margin-top:10px;line-height:1.55">
-          Le chemin 3D repose sur le terrain et grandit vers le haut quand tu augmentes sa hauteur.
-        </div>
-      </div>
-
-      <button class="btnPrimary" id="orderBtn">Commander →</button>
-    </div>
+<div id="app">
+  <div id="viewer">
+    <canvas id="c"></canvas>
+    <div id="status">Chargement démo…</div>
+    <div id="plateOverlay"></div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script>
-    /*
-      ===============================
-      CONFIGURATION "VRAIE MONTAGNE"
-      ===============================
+  <div id="sidebar">
 
-      Pour modéliser les vraies montagnes autour du GPX, branche ton backend/API ici :
-      - USE_REAL_TERRAIN_PROVIDER = true
-      - fetchRealTerrainGridFromProvider(bbox, cols, rows)
+    <!-- SECTION 1 : GPX -->
+    <div class="section">
+      <div class="section-title"><span class="step">1</span> Fichier GPX</div>
+      <div class="dropzone" id="dropzone">
+        <span class="icon">⛰</span>
+        <strong>Choisir un fichier GPX</strong>
+        <p>ou glisser-déposer ici</p>
+      </div>
+      <input type="file" id="gpxinput" accept=".gpx" style="display:none">
+      <div id="fileInfo" class="file-info" style="display:none"></div>
 
-      Le backend doit renvoyer:
-      {
-        elevations: [[...], [...], ...], // rows x cols
-        minElevation: number,
-        maxElevation: number
+      <div id="progressWrap">
+        <div id="progressBar"><div id="progressFill"></div></div>
+        <div id="progressLabel">Récupération des élévations réelles…</div>
+      </div>
+
+      <button class="btn btn-secondary" id="previewBtn" disabled>
+        Charger &amp; aperçu →
+      </button>
+
+      <div class="note">
+        <b>Terrain réel :</b> après chargement du GPX, les élévations sont récupérées depuis OpenTopoData (SRTM 30m) selon la bounding box GPS du tracé. Le terrain autour du chemin est modélisé fidèlement.
+      </div>
+    </div>
+
+    <!-- SECTION 2 : Relief -->
+    <div class="section">
+      <div class="section-title"><span class="step">2</span> Relief &amp; vue</div>
+
+      <div class="row">
+        <label>Élévation ×</label>
+        <input type="range" id="elev" min="1" max="12" step="0.5" value="4">
+        <span class="val" id="elevVal">4.0</span>
+      </div>
+      <div class="row">
+        <label>Base (mm)</label>
+        <input type="range" id="base" min="0.2" max="1.5" step="0.05" value="0.5">
+        <span class="val" id="baseVal">0.5</span>
+      </div>
+      <div class="row">
+        <label>Marge zone</label>
+        <input type="range" id="margin" min="0.05" max="0.5" step="0.01" value="0.2">
+        <span class="val" id="marginVal">20%</span>
+      </div>
+      <div class="row">
+        <label>Zoom vue</label>
+        <input type="range" id="zoom" min="0.5" max="2.0" step="0.02" value="1.0">
+        <span class="val" id="zoomVal">1.0×</span>
+      </div>
+      <div class="row">
+        <label>Rotation H</label>
+        <input type="range" id="rotH" min="-180" max="180" step="1" value="-30">
+        <span class="val" id="rotHVal">-30°</span>
+      </div>
+      <div class="row">
+        <label>Inclinaison</label>
+        <input type="range" id="rotV" min="10" max="80" step="1" value="38">
+        <span class="val" id="rotVVal">38°</span>
+      </div>
+    </div>
+
+    <!-- SECTION 3 : Tracé -->
+    <div class="section">
+      <div class="section-title"><span class="step">3</span> Tracé GPX</div>
+      <div class="row">
+        <label>Largeur</label>
+        <input type="range" id="traceW" min="0.02" max="0.25" step="0.005" value="0.07">
+        <span class="val" id="traceWVal">0.07</span>
+      </div>
+      <div class="row">
+        <label>Hauteur</label>
+        <input type="range" id="traceH" min="0.02" max="0.30" step="0.005" value="0.09">
+        <span class="val" id="traceHVal">0.09</span>
+      </div>
+      <div class="note" style="margin-bottom:8px">Couleur du tracé</div>
+      <div class="color-grid" id="colorGrid">
+        <div class="color-opt active" data-color="#d45000" style="background:#d45000" title="Orange"></div>
+        <div class="color-opt" data-color="#cc1c1c" style="background:#cc1c1c" title="Rouge"></div>
+        <div class="color-opt" data-color="#e8c200" style="background:#e8c200" title="Jaune"></div>
+        <div class="color-opt" data-color="#ffffff" style="background:#fff;border:1px solid #ccc" title="Blanc"></div>
+        <div class="color-opt" data-color="#1a5fe8" style="background:#1a5fe8" title="Bleu"></div>
+      </div>
+    </div>
+
+    <!-- SECTION 4 : Plaque -->
+    <div class="section">
+      <div class="section-title"><span class="step">4</span> Plaque</div>
+      <input type="text" id="txt1" value="Patrouille des Glaciers" placeholder="Ligne 1">
+      <input type="text" id="txt2" value="57.5 km · 4380 m D+" placeholder="Ligne 2">
+    </div>
+
+    <!-- SECTION 5 : Export -->
+    <div class="section">
+      <div class="section-title"><span class="step">5</span> Commander / Exporter</div>
+      <button class="btn btn-stl" id="stlBtn">Télécharger STL →</button>
+      <button class="btn btn-primary" id="orderBtn" style="margin-top:8px">Commander →</button>
+      <div class="note" style="margin-top:8px">
+        Le fichier STL contient le terrain + socle + tracé, prêt pour impression 3D (slice à 0.15–0.2mm, 20% infill). Taille réelle ~150×150mm à l'échelle 1:1.
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+</div><!-- /app -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================================
+//  ÉTAT GLOBAL
+// ============================================================
+const GRID = 128;       // résolution grille
+const SIZE = 5.8;       // taille scène Three.js
+const REAL_MM = 150;    // taille physique en mm pour STL
+const MAX_TOPO_SAMPLES = 500; // limite API OpenTopoData
+
+let gpxPoints = null;
+let terrainData = null;
+let pendingGPX = null;
+let pendingName = '';
+
+let cfg = {
+  elevScale: 4.0,
+  baseThick: 0.5,
+  margin: 0.2,
+  zoom: 1.0,
+  rotH: -30,
+  rotV: 38,
+  traceW: 0.07,
+  traceH: 0.09,
+  traceColor: '#d45000',
+  txt1: 'Patrouille des Glaciers',
+  txt2: '57.5 km · 4380 m D+',
+};
+
+let renderer, scene, camera, terrainGroup, pathObj;
+
+// ============================================================
+//  UTILITAIRES
+// ============================================================
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+const lerp = (a,b,t) => a+(b-a)*t;
+function setStatus(t){ $('status').textContent = t; }
+function setProgress(pct, label) {
+  $('progressWrap').style.display = 'block';
+  $('progressFill').style.width = pct + '%';
+  $('progressLabel').textContent = label;
+  if (pct >= 100) setTimeout(() => { $('progressWrap').style.display = 'none'; }, 1200);
+}
+
+function latLonDist(lat1,lon1,lat2,lon2){
+  const R=6371000, r=d=>d*Math.PI/180;
+  const dLat=r(lat2-lat1), dLon=r(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(r(lat1))*Math.cos(r(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function computeGPXStats(pts){
+  let dist=0,dp=0,dm=0;
+  for(let i=1;i<pts.length;i++){
+    dist+=latLonDist(pts[i-1].lat,pts[i-1].lon,pts[i].lat,pts[i].lon);
+    const de=pts[i].ele-pts[i-1].ele;
+    if(de>0) dp+=de; else dm+=-de;
+  }
+  return {distKm:dist/1000, dPlus:Math.round(dp), dMinus:Math.round(dm)};
+}
+
+function parseGPX(text){
+  const doc=new DOMParser().parseFromString(text,'application/xml');
+  const pts=[];
+  doc.querySelectorAll('trkpt').forEach(p=>{
+    const lat=parseFloat(p.getAttribute('lat'));
+    const lon=parseFloat(p.getAttribute('lon'));
+    const el=p.querySelector('ele');
+    const ele=el?parseFloat(el.textContent):0;
+    if(!isNaN(lat)&&!isNaN(lon)) pts.push({lat,lon,ele});
+  });
+  return pts;
+}
+
+function resample(pts, n){
+  if(pts.length<=n) return [...pts];
+  const step=(pts.length-1)/(n-1);
+  const out=[];
+  for(let i=0;i<n;i++) out.push(pts[Math.round(i*step)]);
+  return out;
+}
+
+function computeBBox(pts, marginRatio=0.2){
+  const lats=pts.map(p=>p.lat), lons=pts.map(p=>p.lon);
+  let minLat=Math.min(...lats),maxLat=Math.max(...lats);
+  let minLon=Math.min(...lons),maxLon=Math.max(...lons);
+  const dLat=Math.max(1e-6,maxLat-minLat);
+  const dLon=Math.max(1e-6,maxLon-minLon);
+  minLat-=dLat*marginRatio; maxLat+=dLat*marginRatio;
+  minLon-=dLon*marginRatio; maxLon+=dLon*marginRatio;
+  return {minLat,maxLat,minLon,maxLon};
+}
+
+function smoothGrid(grid, passes=2){
+  const h=grid.length, w=grid[0].length;
+  let cur=grid.map(r=>r.slice());
+  for(let p=0;p<passes;p++){
+    const next=cur.map(r=>r.slice());
+    for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){
+      let s=0,c=0;
+      for(let oy=-1;oy<=1;oy++) for(let ox=-1;ox<=1;ox++){s+=cur[y+oy][x+ox];c++;}
+      next[y][x]=s/c;
+    }
+    cur=next;
+  }
+  return cur;
+}
+
+// ============================================================
+//  OPENTOPODATA — élévations réelles
+//  API gratuite SRTM30 : https://api.opentopodata.org/v1/srtm30m
+//  Limite : 100 points/requête, 1 req/s, 1000/jour
+// ============================================================
+async function fetchElevationsFromOpenTopo(latLons){
+  // Découpe en batches de 100
+  const BATCH = 100;
+  const batches = [];
+  for(let i=0;i<latLons.length;i+=BATCH) batches.push(latLons.slice(i,i+BATCH));
+
+  const elevations = [];
+  for(let b=0;b<batches.length;b++){
+    const batch = batches[b];
+    setProgress(Math.round((b/batches.length)*85), `Élévations réelles (lot ${b+1}/${batches.length})…`);
+    const locations = batch.map(p=>`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join('|');
+    const url = `https://api.opentopodata.org/v1/srtm30m?locations=${locations}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error(`OpenTopoData HTTP ${res.status}`);
+    const data = await res.json();
+    if(data.status !== 'OK') throw new Error(`OpenTopoData: ${data.error || data.status}`);
+    for(const r of data.results) elevations.push(r.elevation || 0);
+    // Pause entre batches pour respecter le rate limit
+    if(b < batches.length-1) await new Promise(r=>setTimeout(r,1100));
+  }
+  return elevations;
+}
+
+// ============================================================
+//  CONSTRUCTION DU TERRAIN RÉEL
+// ============================================================
+async function buildTerrainData(pts){
+  const resampled = resample(pts, 500);
+  const bbox = computeBBox(resampled, cfg.margin);
+  setStatus('Calcul grille terrain…');
+
+  // Grille de points lat/lon à interroger
+  const gridLatLons = [];
+  for(let gy=0;gy<GRID;gy++){
+    for(let gx=0;gx<GRID;gx++){
+      const lat = bbox.minLat + (gy/(GRID-1))*(bbox.maxLat-bbox.minLat);
+      const lon = bbox.minLon + (gx/(GRID-1))*(bbox.maxLon-bbox.minLon);
+      gridLatLons.push({lat,lon});
+    }
+  }
+
+  let rawElevs;
+  let mode = 'fallback';
+
+  try {
+    // Sous-échantillonnage pour rester dans les limites API
+    // On interroge une grille réduite (32×32=1024 → trop, 24×24=576 → ok avec batches, 22×22=484)
+    const FETCH_GRID = 22; // 22×22 = 484 points → 5 batches
+    const fetchLatLons = [];
+    for(let gy=0;gy<FETCH_GRID;gy++){
+      for(let gx=0;gx<FETCH_GRID;gx++){
+        const lat = bbox.minLat + (gy/(FETCH_GRID-1))*(bbox.maxLat-bbox.minLat);
+        const lon = bbox.minLon + (gx/(FETCH_GRID-1))*(bbox.maxLon-bbox.minLon);
+        fetchLatLons.push({lat,lon});
       }
-
-      bbox = {
-        minLat, maxLat, minLon, maxLon
-      }
-
-      Sans provider, le code utilise un fallback local basé sur les altitudes réelles du GPX.
-    */
-    const USE_REAL_TERRAIN_PROVIDER = false;
-    const DEMO_POINTS = (() => {
-      const pts = [];
-      let lat = 46.060;
-      let lon = 7.470;
-      for (let i = 0; i < 420; i++) {
-        lat += (Math.random() - 0.28) * 0.0045;
-        lon += 0.0018 + (Math.random() - 0.5) * 0.0028;
-        const ridgeA = Math.sin(i * 0.065) * 520;
-        const ridgeB = Math.sin(i * 0.14 + 0.8) * 260;
-        const ridgeC = Math.cos(i * 0.032 + 1.2) * 420;
-        const ele = 1650 + ridgeA + ridgeB + ridgeC + Math.random() * 35;
-        pts.push({ lat, lon, ele: Math.max(1100, ele) });
-      }
-      return pts;
-    })();
-
-    let gpxPoints = DEMO_POINTS;
-    let pendingGPXText = null;
-    let pendingGPXFileName = '';
-    let terrainData = null;
-
-    let elevScale = 4.0;
-    let zoomVal = 1.0;
-    let rotH = -30;
-    let rotV = 38;
-    let gpxScale = 1.02;
-    let terrainMargin = 0.22;
-    let traceWidth = 0.08;
-    let traceHeight = 0.08;
-    let baseThickness = 0.48;
-    let traceColor = '#d44000';
-    let txt1 = 'Patrouille des Glaciers';
-    let txt2 = '57.5 km · 4380 m D+';
-    let filename = 'Démo interne';
-    let gpxStats = { distanceKm: 57.5, dPlus: 4380, dMinus: 4380 };
-
-    let renderer, scene, camera, terrainGroup, pathMesh;
-    const SIZE = 5.8;
-    const GRID = 180;
-
-    function setStatus(text) {
-      document.getElementById('status').textContent = text;
     }
+    setProgress(5, `Connexion OpenTopoData (${fetchLatLons.length} pts)…`);
+    const fetchElevs = await fetchElevationsFromOpenTopo(fetchLatLons);
+    setProgress(90, 'Interpolation grille haute résolution…');
 
-    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-    function lerp(a, b, t) { return a + (b - a) * t; }
-    function smoothstep(edge0, edge1, x) {
-      const t = clamp((x - edge0) / (edge1 - edge0 || 1), 0, 1);
-      return t * t * (3 - 2 * t);
-    }
-
-    function latLonToMeters(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const toRad = d => d * Math.PI / 180;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-      return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function computeStats(points) {
-      let distance = 0, dPlus = 0, dMinus = 0;
-      for (let i = 1; i < points.length; i++) {
-        distance += latLonToMeters(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon);
-        const de = points[i].ele - points[i - 1].ele;
-        if (de > 0) dPlus += de; else dMinus += -de;
-      }
-      return { distanceKm: distance / 1000, dPlus: Math.round(dPlus), dMinus: Math.round(dMinus) };
-    }
-
-    function updateStatsUI() {
-      document.getElementById('gpxStats').textContent =
-        `Distance: ${gpxStats.distanceKm.toFixed(1)} km · D+: ${gpxStats.dPlus} m · D−: ${gpxStats.dMinus} m`;
-    }
-
-    function updatePlate() {
-      document.getElementById('plateOverlay').textContent = [txt1, txt2].filter(Boolean).join('  —  ');
-      pushConfigToParent();
-    }
-
-    function resamplePoints(points, maxCount = 500) {
-      if (points.length <= maxCount) return points.slice();
-      const step = (points.length - 1) / (maxCount - 1);
-      const out = [];
-      for (let i = 0; i < maxCount; i++) out.push(points[Math.round(i * step)]);
-      return out;
-    }
-
-    function smoothGrid(grid, passes = 2) {
-      const h = grid.length;
-      const w = grid[0].length;
-      let current = grid.map(row => row.slice());
-      for (let p = 0; p < passes; p++) {
-        const next = current.map(row => row.slice());
-        for (let y = 1; y < h - 1; y++) {
-          for (let x = 1; x < w - 1; x++) {
-            let sum = 0, count = 0;
-            for (let oy = -1; oy <= 1; oy++) {
-              for (let ox = -1; ox <= 1; ox++) {
-                sum += current[y + oy][x + ox];
-                count++;
-              }
-            }
-            next[y][x] = sum / count;
-          }
-        }
-        current = next;
-      }
-      return current;
-    }
-
-    function parseGPX(text) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(text, 'application/xml');
-      const trkpts = doc.querySelectorAll('trkpt');
-      const pts = [];
-      trkpts.forEach(pt => {
-        const lat = parseFloat(pt.getAttribute('lat'));
-        const lon = parseFloat(pt.getAttribute('lon'));
-        const eleEl = pt.querySelector('ele');
-        const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
-        if (!Number.isNaN(lat) && !Number.isNaN(lon)) pts.push({ lat, lon, ele });
-      });
-      return pts;
-    }
-
-    function computeBBox(points, marginRatio = 0.2) {
-      const lats = points.map(p => p.lat);
-      const lons = points.map(p => p.lon);
-      let minLat = Math.min(...lats), maxLat = Math.max(...lats);
-      let minLon = Math.min(...lons), maxLon = Math.max(...lons);
-      const dLat = Math.max(1e-6, maxLat - minLat);
-      const dLon = Math.max(1e-6, maxLon - minLon);
-      minLat -= dLat * marginRatio;
-      maxLat += dLat * marginRatio;
-      minLon -= dLon * marginRatio;
-      maxLon += dLon * marginRatio;
-      return { minLat, maxLat, minLon, maxLon };
-    }
-
-    async function fetchRealTerrainGridFromProvider(bbox, cols, rows) {
-      /*
-        Exemple attendu:
-        const res = await fetch('/api/terrain-grid', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bbox, cols, rows })
-        });
-        if (!res.ok) throw new Error('Provider terrain indisponible');
-        return await res.json();
-      */
-      throw new Error('Aucun provider terrain branché');
-    }
-
-    async function buildTerrainData(points) {
-      const pts = resamplePoints(points, 500);
-      const bbox = computeBBox(pts, terrainMargin);
-
-      const rawPath = pts.map(p => ({
-        nx: (p.lon - bbox.minLon) / (bbox.maxLon - bbox.minLon || 1),
-        ny: (p.lat - bbox.minLat) / (bbox.maxLat - bbox.minLat || 1),
-        ele: p.ele
-      })).map(p => ({
-        nx: 0.5 + (p.nx - 0.5) * gpxScale,
-        ny: 0.5 + (p.ny - 0.5) * gpxScale,
-        ele: p.ele
-      }));
-
-      const minElePath = Math.min(...pts.map(p => p.ele));
-      const maxElePath = Math.max(...pts.map(p => p.ele));
-      const eleRangePath = Math.max(1, maxElePath - minElePath);
-
-      const normalizedPath = rawPath.map((p, i) => ({
-        nx: p.nx,
-        ny: p.ny,
-        h: (p.ele - minElePath) / eleRangePath,
-        absEle: p.ele,
-        index: i / Math.max(1, rawPath.length - 1)
-      }));
-
-      if (USE_REAL_TERRAIN_PROVIDER) {
-        try {
-          const provider = await fetchRealTerrainGridFromProvider(bbox, GRID, GRID);
-          const elevations = provider.elevations;
-          const minElevation = provider.minElevation;
-          const maxElevation = provider.maxElevation;
-          const range = Math.max(1, maxElevation - minElevation);
-
-          const heights = elevations.map(row => row.map(v => (v - minElevation) / range));
-          return {
-            mode: 'real-terrain',
-            bbox,
-            pts,
-            normalizedPath,
-            heights,
-            minEle: minElevation,
-            maxEle: maxElevation,
-            eleRange: range
-          };
-        } catch (err) {
-          console.warn('Fallback terrain GPX:', err);
-          setStatus('Provider terrain indisponible — fallback GPX');
-        }
-      }
-
-      const heights = Array.from({ length: GRID }, () => Array(GRID).fill(0));
-      const corridorGrid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
-      const mainWidth = 0.06;
-      const sideWidth = 0.16;
-
-      for (let gy = 0; gy < GRID; gy++) {
-        for (let gx = 0; gx < GRID; gx++) {
-          const nx = gx / (GRID - 1);
-          const ny = 1 - gy / (GRID - 1);
-
-          let weightedHeight = 0;
-          let totalW = 0;
-          let corridor = 0;
-
-          for (const p of normalizedPath) {
-            const dx = nx - p.nx;
-            const dy = ny - p.ny;
-            const d2 = dx * dx + dy * dy;
-            const d = Math.sqrt(d2);
-            const w = 1 / (d2 + 0.00008);
-            totalW += w;
-            weightedHeight += w * p.h;
-
-            const near = Math.exp(-(d * d) / (2 * mainWidth * mainWidth));
-            const far = Math.exp(-(d * d) / (2 * sideWidth * sideWidth));
-            corridor = Math.max(corridor, near + 0.45 * far);
-          }
-
-          const pathHeight = weightedHeight / totalW;
-          const borderFalloffX = smoothstep(0.0, 0.08, nx) * (1 - smoothstep(0.92, 1.0, nx));
-          const borderFalloffY = smoothstep(0.0, 0.08, ny) * (1 - smoothstep(0.92, 1.0, ny));
-          const borderFalloff = Math.min(borderFalloffX, borderFalloffY);
-
-          let h = pathHeight * Math.min(corridor, 1.0);
-          h += Math.pow(Math.min(corridor, 1.0), 1.35) * 0.22;
-          h *= borderFalloff;
-
-          heights[gy][gx] = h;
-          corridorGrid[gy][gx] = corridor;
-        }
-      }
-
-      const smoothHeights = smoothGrid(heights, 2);
-      for (let gy = 0; gy < GRID; gy++) {
-        for (let gx = 0; gx < GRID; gx++) {
-          const c = Math.min(corridorGrid[gy][gx], 1.0);
-          heights[gy][gx] = smoothHeights[gy][gx] * (1 - c * 0.35) + heights[gy][gx] * (c * 0.35);
-        }
-      }
-
-      return {
-        mode: 'gpx-fallback',
-        bbox,
-        pts,
-        normalizedPath,
-        heights,
-        minEle: minElePath,
-        maxEle: maxElePath,
-        eleRange: eleRangePath
-      };
-    }
-
-    function gridHeightAt(nx, ny) {
-      if (!terrainData) return 0;
-      const x = clamp(nx, 0, 1) * (GRID - 1);
-      const y = clamp(1 - ny, 0, 1) * (GRID - 1);
-      const x0 = Math.floor(x), x1 = Math.min(GRID - 1, x0 + 1);
-      const y0 = Math.floor(y), y1 = Math.min(GRID - 1, y0 + 1);
-      const tx = x - x0, ty = y - y0;
-
-      const h00 = terrainData.heights[y0][x0];
-      const h10 = terrainData.heights[y0][x1];
-      const h01 = terrainData.heights[y1][x0];
-      const h11 = terrainData.heights[y1][x1];
-      return lerp(lerp(h00, h10, tx), lerp(h01, h11, tx), ty);
-    }
-
-    function paletteHeightColor(h) {
-      const c1 = new THREE.Color(0x6f7568);
-      const c2 = new THREE.Color(0x8e9a7b);
-      const c3 = new THREE.Color(0xb7b29e);
-      const c4 = new THREE.Color(0xded7c9);
-      const c5 = new THREE.Color(0xf4f7fb);
-      const col = new THREE.Color();
-      if (h < 0.25) col.copy(c1).lerp(c2, h / 0.25);
-      else if (h < 0.5) col.copy(c2).lerp(c3, (h - 0.25) / 0.25);
-      else if (h < 0.78) col.copy(c3).lerp(c4, (h - 0.5) / 0.28);
-      else col.copy(c4).lerp(c5, (h - 0.78) / 0.22);
-      return col;
-    }
-
-    function clearObject(obj) {
-      if (!obj) return;
-      while (obj.children.length) {
-        const child = obj.children[0];
-        clearObject(child);
-        obj.remove(child);
-      }
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) {
-        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
-        else obj.material.dispose();
+    // Mise en grille basse résolution
+    const coarseGrid = Array.from({length:FETCH_GRID},()=>Array(FETCH_GRID).fill(0));
+    for(let gy=0;gy<FETCH_GRID;gy++){
+      for(let gx=0;gx<FETCH_GRID;gx++){
+        coarseGrid[gy][gx] = fetchElevs[gy*FETCH_GRID+gx];
       }
     }
 
-    async function buildScene() {
-      if (!scene) return;
-      if (terrainGroup) {
-        clearObject(terrainGroup);
-        scene.remove(terrainGroup);
-      }
-      if (pathMesh) {
-        clearObject(pathMesh);
-        scene.remove(pathMesh);
-      }
-
-      terrainData = await buildTerrainData(gpxPoints);
-      const elevH = 1.75 * (elevScale / 4);
-      const baseY = -baseThickness;
-      terrainGroup = new THREE.Group();
-
-      const topGeo = new THREE.PlaneGeometry(SIZE, SIZE, GRID - 1, GRID - 1);
-      topGeo.rotateX(-Math.PI / 2);
-      const topPos = topGeo.attributes.position;
-      const colors = [];
-
-      for (let gy = 0; gy < GRID; gy++) {
-        for (let gx = 0; gx < GRID; gx++) {
-          const idx = gy * GRID + gx;
-          const h = terrainData.heights[gy][gx];
-          topPos.setY(idx, h * elevH);
-          const col = paletteHeightColor(h);
-          colors.push(col.r, col.g, col.b);
-        }
-      }
-      topGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-      topGeo.computeVertexNormals();
-
-      const topMat = new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 0.96,
-        metalness: 0.02,
-        flatShading: false
-      });
-      terrainGroup.add(new THREE.Mesh(topGeo, topMat));
-
-      const sideMat = new THREE.MeshStandardMaterial({
-        color: 0xddd6c9, roughness: 0.98, metalness: 0.01
-      });
-      terrainGroup.add(buildSideStrip('north', elevH, baseY, sideMat));
-      terrainGroup.add(buildSideStrip('south', elevH, baseY, sideMat));
-      terrainGroup.add(buildSideStrip('west', elevH, baseY, sideMat));
-      terrainGroup.add(buildSideStrip('east', elevH, baseY, sideMat));
-
-      const bottom = new THREE.Mesh(
-        new THREE.BoxGeometry(SIZE, 0.001, SIZE),
-        new THREE.MeshStandardMaterial({ color: 0xefe8dd, roughness: 1.0, metalness: 0.0 })
-      );
-      bottom.position.y = baseY - 0.0005;
-      terrainGroup.add(bottom);
-
-      const bevel = new THREE.Mesh(
-        new THREE.BoxGeometry(SIZE + 0.05, 0.03, SIZE + 0.05),
-        new THREE.MeshStandardMaterial({ color: 0xe9e2d6, roughness: 1.0 })
-      );
-      bevel.position.y = baseY - 0.016;
-      terrainGroup.add(bevel);
-
-      scene.add(terrainGroup);
-      buildPathMesh(elevH);
-      updatePlate();
-      updateStatsUI();
-      pushConfigToParent();
-      setStatus(terrainData.mode === 'real-terrain' ? 'Relief réel terrain chargé' : 'Relief GPX chargé');
-    }
-
-    function buildSideStrip(side, elevH, baseY, mat) {
-      const top = [];
-      if (side === 'north') for (let x = 0; x < GRID; x++) top.push({ x, y: 0, h: terrainData.heights[0][x] * elevH });
-      if (side === 'south') for (let x = 0; x < GRID; x++) top.push({ x, y: GRID - 1, h: terrainData.heights[GRID - 1][x] * elevH });
-      if (side === 'west') for (let y = 0; y < GRID; y++) top.push({ x: 0, y, h: terrainData.heights[y][0] * elevH });
-      if (side === 'east') for (let y = 0; y < GRID; y++) top.push({ x: GRID - 1, y, h: terrainData.heights[y][GRID - 1] * elevH });
-
-      const pos = [];
-      const idx = [];
-      for (let i = 0; i < top.length; i++) {
-        const p = top[i];
-        const nx = p.x / (GRID - 1);
-        const ny = 1 - p.y / (GRID - 1);
-        const worldX = (nx - 0.5) * SIZE;
-        const worldZ = (0.5 - ny) * SIZE;
-        pos.push(worldX, p.h, worldZ);
-        pos.push(worldX, baseY, worldZ);
-      }
-      for (let i = 0; i < top.length - 1; i++) {
-        const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
-        idx.push(a, b, c, c, b, d);
-      }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      geo.setIndex(idx);
-      geo.computeVertexNormals();
-      return new THREE.Mesh(geo, mat);
-    }
-
-    function buildPathMesh(elevH) {
-      const pathPoints = terrainData.normalizedPath.map(p => {
-        const x = (p.nx - 0.5) * SIZE;
-        const z = (0.5 - p.ny) * SIZE;
-        const y = gridHeightAt(p.nx, p.ny) * elevH;
-        return new THREE.Vector3(x, y, z);
-      });
-
-      const reduced = [];
-      const step = Math.max(1, Math.floor(pathPoints.length / 240));
-      for (let i = 0; i < pathPoints.length; i += step) reduced.push(pathPoints[i]);
-      if (reduced[reduced.length - 1] !== pathPoints[pathPoints.length - 1]) reduced.push(pathPoints[pathPoints.length - 1]);
-
-      const positions = [];
-      const indices = [];
-
-      for (let i = 0; i < reduced.length; i++) {
-        const p = reduced[i];
-        const prev = reduced[Math.max(0, i - 1)];
-        const next = reduced[Math.min(reduced.length - 1, i + 1)];
-
-        const dir = new THREE.Vector3().subVectors(next, prev);
-        dir.y = 0;
-        if (dir.lengthSq() < 1e-8) dir.set(1, 0, 0);
-        dir.normalize();
-
-        const normal = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
-        const halfW = traceWidth / 2;
-
-        const leftBottom = p.clone().addScaledVector(normal, halfW);
-        const rightBottom = p.clone().addScaledVector(normal, -halfW);
-        const leftTop = leftBottom.clone(); leftTop.y += traceHeight;
-        const rightTop = rightBottom.clone(); rightTop.y += traceHeight;
-
-        positions.push(
-          leftBottom.x, leftBottom.y, leftBottom.z,
-          rightBottom.x, rightBottom.y, rightBottom.z,
-          leftTop.x, leftTop.y, leftTop.z,
-          rightTop.x, rightTop.y, rightTop.z
+    // Interpolation bilinéaire vers GRID×GRID
+    rawElevs = Array.from({length:GRID},()=>Array(GRID).fill(0));
+    for(let gy=0;gy<GRID;gy++){
+      for(let gx=0;gx<GRID;gx++){
+        const fx = gx/(GRID-1)*(FETCH_GRID-1);
+        const fy = gy/(GRID-1)*(FETCH_GRID-1);
+        const x0=Math.floor(fx), x1=Math.min(FETCH_GRID-1,x0+1);
+        const y0=Math.floor(fy), y1=Math.min(FETCH_GRID-1,y0+1);
+        const tx=fx-x0, ty=fy-y0;
+        rawElevs[gy][gx] = lerp(
+          lerp(coarseGrid[y0][x0],coarseGrid[y0][x1],tx),
+          lerp(coarseGrid[y1][x0],coarseGrid[y1][x1],tx),
+          ty
         );
       }
+    }
+    mode = 'real-srtm';
+  } catch(err) {
+    console.warn('OpenTopoData indisponible, fallback GPX:', err.message);
+    setStatus('Fallback GPX (OpenTopoData indisponible)');
+    rawElevs = buildFallbackGrid(resampled, bbox);
+    mode = 'fallback';
+  }
 
-      for (let i = 0; i < reduced.length - 1; i++) {
-        const a = i * 4;
-        const b = a + 4;
+  // Normalisation 0→1
+  let minE = Infinity, maxE = -Infinity;
+  for(const row of rawElevs) for(const v of row){
+    if(v<minE) minE=v; if(v>maxE) maxE=v;
+  }
+  const eleRange = Math.max(1, maxE-minE);
 
-        indices.push(a + 2, a + 3, b + 2, b + 2, a + 3, b + 3); // dessus
-        indices.push(a + 0, a + 2, b + 0, b + 0, a + 2, b + 2); // gauche
-        indices.push(a + 3, a + 1, b + 3, b + 3, a + 1, b + 1); // droite
+  const heights = rawElevs.map(row => row.map(v => (v-minE)/eleRange));
+  const smoothed = smoothGrid(heights, 3);
+
+  // Chemin normalisé sur la grille
+  const normalizedPath = resampled.map(p=>({
+    nx: (p.lon-bbox.minLon)/(bbox.maxLon-bbox.minLon||1),
+    ny: (p.lat-bbox.minLat)/(bbox.maxLat-bbox.minLat||1),
+    ele: p.ele
+  }));
+
+  setProgress(100, 'Terrain chargé !');
+  return { mode, bbox, pts: resampled, normalizedPath, heights: smoothed, minEle:minE, maxEle:maxE, eleRange };
+}
+
+function buildFallbackGrid(pts, bbox){
+  const heights = Array.from({length:GRID},()=>Array(GRID).fill(0));
+  const norm = pts.map(p=>({
+    nx:(p.lon-bbox.minLon)/(bbox.maxLon-bbox.minLon||1),
+    ny:(p.lat-bbox.minLat)/(bbox.maxLat-bbox.minLat||1),
+    ele:p.ele
+  }));
+  const minEle = Math.min(...pts.map(p=>p.ele));
+  const maxEle = Math.max(...pts.map(p=>p.ele));
+  const range = Math.max(1, maxEle-minEle);
+
+  for(let gy=0;gy<GRID;gy++) for(let gx=0;gx<GRID;gx++){
+    const nx=gx/(GRID-1), ny=1-gy/(GRID-1);
+    let wH=0,wT=0;
+    for(const p of norm){
+      const d2=(nx-p.nx)**2+(ny-p.ny)**2;
+      const w=1/(d2+0.0001);
+      wH+=w*(p.ele-minEle)/range; wT+=w;
+    }
+    heights[gy][gx]=wH/wT;
+  }
+  return heights;
+}
+
+// ============================================================
+//  HEIGHTMAP → VALEUR INTERPOLÉE
+// ============================================================
+function sampleHeight(nx,ny){
+  if(!terrainData) return 0;
+  const x=clamp(nx,0,1)*(GRID-1);
+  const y=clamp(1-ny,0,1)*(GRID-1);
+  const x0=Math.floor(x),x1=Math.min(GRID-1,x0+1);
+  const y0=Math.floor(y),y1=Math.min(GRID-1,y0+1);
+  const tx=x-x0,ty=y-y0;
+  return lerp(
+    lerp(terrainData.heights[y0][x0],terrainData.heights[y0][x1],tx),
+    lerp(terrainData.heights[y1][x0],terrainData.heights[y1][x1],tx),
+    ty
+  );
+}
+
+// ============================================================
+//  PALETTE COULEUR TERRAIN
+// ============================================================
+function heightColor(h){
+  const stops=[
+    [0.00, 0x58,0x63,0x58],
+    [0.25, 0x7a,0x88,0x72],
+    [0.50, 0xa8,0xa4,0x94],
+    [0.75, 0xd4,0xce,0xc0],
+    [1.00, 0xf2,0xf0,0xeb],
+  ];
+  for(let i=1;i<stops.length;i++){
+    if(h<=stops[i][0]){
+      const t=(h-stops[i-1][0])/(stops[i][0]-stops[i-1][0]);
+      const r=lerp(stops[i-1][1],stops[i][1],t)/255;
+      const g=lerp(stops[i-1][2],stops[i][2],t)/255;
+      const b=lerp(stops[i-1][3],stops[i][3],t)/255;
+      return new THREE.Color(r,g,b);
+    }
+  }
+  return new THREE.Color(1,1,1);
+}
+
+// ============================================================
+//  CONSTRUCTION SCÈNE THREE.JS
+// ============================================================
+function clearGroup(obj){
+  if(!obj) return;
+  while(obj.children.length){ const c=obj.children[0]; clearGroup(c); obj.remove(c); }
+  if(obj.geometry) obj.geometry.dispose();
+  if(obj.material){ (Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>m.dispose()); }
+}
+
+async function buildScene(){
+  if(!scene) return;
+  if(terrainGroup){ clearGroup(terrainGroup); scene.remove(terrainGroup); }
+  if(pathObj){ clearGroup(pathObj); scene.remove(pathObj); }
+
+  if(!terrainData){
+    setStatus('En attente d\'un fichier GPX…');
+    return;
+  }
+
+  const elevH = 1.8*(cfg.elevScale/4);
+  const baseY = -cfg.baseThick;
+  terrainGroup = new THREE.Group();
+
+  // — Surface top —
+  const geo = new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1);
+  geo.rotateX(-Math.PI/2);
+  const pos = geo.attributes.position;
+  const cols = [];
+  for(let gy=0;gy<GRID;gy++) for(let gx=0;gx<GRID;gx++){
+    const idx=gy*GRID+gx;
+    const h=terrainData.heights[gy][gx];
+    pos.setY(idx, h*elevH);
+    const c=heightColor(h);
+    cols.push(c.r,c.g,c.b);
+  }
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  geo.computeVertexNormals();
+  terrainGroup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    vertexColors:true, roughness:.95, metalness:.01
+  })));
+
+  // — Flancs —
+  const sideMat = new THREE.MeshStandardMaterial({color:0xd8d0c2,roughness:.99});
+  ['north','south','west','east'].forEach(s=>terrainGroup.add(buildSide(s,elevH,baseY,sideMat)));
+
+  // — Fond —
+  terrainGroup.add(Object.assign(new THREE.Mesh(
+    new THREE.BoxGeometry(SIZE,.001,SIZE),
+    new THREE.MeshStandardMaterial({color:0xe8e0d0})
+  ),{position:new THREE.Vector3(0,baseY-.0005,0)}));
+
+  // — Bord chanfrein —
+  const bevelMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(SIZE+.06,.025,SIZE+.06),
+    new THREE.MeshStandardMaterial({color:0xddd5c5})
+  );
+  bevelMesh.position.y = baseY-.013;
+  terrainGroup.add(bevelMesh);
+
+  scene.add(terrainGroup);
+
+  // — Tracé —
+  buildPath(elevH);
+  updatePlate();
+  setStatus(terrainData.mode==='real-srtm' ? '✓ Terrain SRTM réel' : '⚠ Fallback GPX');
+}
+
+function buildSide(side,elevH,baseY,mat){
+  const top=[];
+  if(side==='north') for(let x=0;x<GRID;x++) top.push({x,y:0,h:terrainData.heights[0][x]*elevH});
+  if(side==='south') for(let x=0;x<GRID;x++) top.push({x,y:GRID-1,h:terrainData.heights[GRID-1][x]*elevH});
+  if(side==='west')  for(let y=0;y<GRID;y++) top.push({x:0,y,h:terrainData.heights[y][0]*elevH});
+  if(side==='east')  for(let y=0;y<GRID;y++) top.push({x:GRID-1,y,h:terrainData.heights[y][GRID-1]*elevH});
+  const verts=[],idx=[];
+  for(let i=0;i<top.length;i++){
+    const p=top[i];
+    const nx=p.x/(GRID-1), ny=1-p.y/(GRID-1);
+    const wx=(nx-.5)*SIZE, wz=(.5-ny)*SIZE;
+    verts.push(wx,p.h,wz, wx,baseY,wz);
+  }
+  for(let i=0;i<top.length-1;i++){
+    const a=i*2,b=a+1,c=a+2,d=a+3;
+    idx.push(a,b,c,c,b,d);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g,mat);
+}
+
+function buildPath(elevH){
+  const pathPts = terrainData.normalizedPath.map(p=>new THREE.Vector3(
+    (p.nx-.5)*SIZE,
+    sampleHeight(p.nx,p.ny)*elevH,
+    (.5-p.ny)*SIZE
+  ));
+  const step=Math.max(1,Math.floor(pathPts.length/220));
+  const reduced=[];
+  for(let i=0;i<pathPts.length;i+=step) reduced.push(pathPts[i]);
+  if(reduced[reduced.length-1]!==pathPts[pathPts.length-1]) reduced.push(pathPts[pathPts.length-1]);
+
+  const verts=[],idx=[];
+  for(let i=0;i<reduced.length;i++){
+    const p=reduced[i];
+    const prev=reduced[Math.max(0,i-1)], next=reduced[Math.min(reduced.length-1,i+1)];
+    const dir=new THREE.Vector3().subVectors(next,prev);
+    dir.y=0;
+    if(dir.lengthSq()<1e-8) dir.set(1,0,0);
+    dir.normalize();
+    const n=new THREE.Vector3(-dir.z,0,dir.x);
+    const hw=cfg.traceW/2;
+    const lb=p.clone().addScaledVector(n,hw);
+    const rb=p.clone().addScaledVector(n,-hw);
+    const lt=lb.clone(); lt.y+=cfg.traceH;
+    const rt=rb.clone(); rt.y+=cfg.traceH;
+    verts.push(lb.x,lb.y,lb.z, rb.x,rb.y,rb.z, lt.x,lt.y,lt.z, rt.x,rt.y,rt.z);
+  }
+  for(let i=0;i<reduced.length-1;i++){
+    const a=i*4,b=a+4;
+    idx.push(a+2,a+3,b+2,b+2,a+3,b+3); // top
+    idx.push(a,a+2,b,b,a+2,b+2);       // left
+    idx.push(a+3,a+1,b+3,b+3,a+1,b+1); // right
+  }
+  idx.push(0,1,2,2,1,3);
+  const n=(reduced.length-1)*4;
+  idx.push(n+2,n+1,n,n+3,n+1,n+2);
+
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  pathObj=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
+    color:new THREE.Color(cfg.traceColor), roughness:.5, metalness:.05
+  }));
+  scene.add(pathObj);
+}
+
+function updateCamera(){
+  const rH=cfg.rotH*Math.PI/180, rV=cfg.rotV*Math.PI/180;
+  const dist=10.8/cfg.zoom;
+  camera.position.set(Math.sin(rH)*Math.cos(rV)*dist, Math.sin(rV)*dist, Math.cos(rH)*Math.cos(rV)*dist);
+  camera.lookAt(0,.5,0);
+}
+
+function updatePlate(){
+  $('plateOverlay').innerHTML = [cfg.txt1,cfg.txt2].filter(Boolean).join('<br>');
+}
+
+function animate(){ requestAnimationFrame(animate); renderer.render(scene,camera); }
+
+function initThree(){
+  const wrap=$('viewer');
+  const w=wrap.clientWidth||600, h=wrap.clientHeight||600;
+  renderer=new THREE.WebGLRenderer({canvas:$('c'),antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(w,h);
+  renderer.setClearColor(0,0);
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  scene=new THREE.Scene();
+  scene.fog=new THREE.Fog(0xe8e6e0,12,25);
+  camera=new THREE.PerspectiveCamera(40,w/h,.1,1000);
+  scene.add(new THREE.AmbientLight(0xffffff,.85));
+  const key=new THREE.DirectionalLight(0xffffff,1.1); key.position.set(4,7,3); scene.add(key);
+  const rim=new THREE.DirectionalLight(0xd0dde8,.4); rim.position.set(-3,2,-4); scene.add(rim);
+  const ground=new THREE.Mesh(new THREE.CircleGeometry(18,64),new THREE.MeshBasicMaterial({color:0xddd8d0,transparent:true,opacity:.6}));
+  ground.rotation.x=-Math.PI/2; ground.position.y=-1.2; scene.add(ground);
+  updateCamera();
+  animate();
+  setStatus('En attente d\'un fichier GPX…');
+}
+
+// ============================================================
+//  EXPORT STL BINAIRE
+// ============================================================
+function exportSTL(){
+  if(!terrainData){ alert('Charge d\'abord un GPX.'); return; }
+
+  setStatus('Génération STL…');
+  const scale = REAL_MM/SIZE;  // mm par unité scène
+
+  // Collecte toutes les géométries du terrain + chemin
+  const allGeos = [];
+
+  // Surface terrain
+  const elevH = 1.8*(cfg.elevScale/4);
+  const baseY = -cfg.baseThick;
+
+  // Top surface
+  const topGeo = buildTopGeoForSTL(elevH, scale);
+  allGeos.push(topGeo);
+
+  // Socle (fond plat)
+  allGeos.push(buildBaseForSTL(baseY, scale));
+
+  // Flancs
+  ['north','south','west','east'].forEach(s=>allGeos.push(buildSideForSTL(s,elevH,baseY,scale)));
+
+  // Tracé
+  allGeos.push(buildPathForSTL(elevH, scale));
+
+  // Merge en STL binaire
+  const triangles = [];
+  for(const geo of allGeos){
+    const pos=geo.attributes.position;
+    const idx=geo.index;
+    if(idx){
+      for(let i=0;i<idx.count;i+=3){
+        const a=idx.getX(i),b=idx.getX(i+1),c=idx.getX(i+2);
+        const va=new THREE.Vector3(pos.getX(a),pos.getY(a),pos.getZ(a));
+        const vb=new THREE.Vector3(pos.getX(b),pos.getY(b),pos.getZ(b));
+        const vc=new THREE.Vector3(pos.getX(c),pos.getY(c),pos.getZ(c));
+        triangles.push([va,vb,vc]);
       }
-
-      indices.push(0, 1, 2, 2, 1, 3); // avant
-      const n = (reduced.length - 1) * 4;
-      indices.push(n + 2, n + 1, n + 0, n + 3, n + 1, n + 2); // arrière
-
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      geo.setIndex(indices);
-      geo.computeVertexNormals();
-
-      const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(traceColor),
-        roughness: 0.55,
-        metalness: 0.04
-      });
-
-      pathMesh = new THREE.Mesh(geo, mat);
-      scene.add(pathMesh);
-    }
-
-    function updateCamera() {
-      const rH = rotH * Math.PI / 180;
-      const rV = rotV * Math.PI / 180;
-      const dist = 10.8 / zoomVal;
-      camera.position.set(
-        Math.sin(rH) * Math.cos(rV) * dist,
-        Math.sin(rV) * dist,
-        Math.cos(rH) * Math.cos(rV) * dist
-      );
-      camera.lookAt(0, 0.55, 0);
-      pushConfigToParent();
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    }
-
-    function pushConfigToParent() {
-      const config = {
-        filename, txt1, txt2, elevScale, zoomVal, rotH, rotV, gpxScale, terrainMargin,
-        traceWidth, traceHeight, baseThickness, traceColor, stats: gpxStats,
-        terrainMode: terrainData ? terrainData.mode : 'demo'
-      };
-      try {
-        window.parent._gpxConfig = config;
-        window.parent.postMessage({ type: 'gpx-config', payload: config }, '*');
-      } catch (e) {}
-    }
-
-    function sendOrder() {
-      const summary =
-`Nouvelle commande configurateur:
-- GPX: ${filename}
-- Distance: ${gpxStats.distanceKm.toFixed(1)} km
-- D+: ${gpxStats.dPlus} m
-- D-: ${gpxStats.dMinus} m
-- Mode terrain: ${terrainData ? terrainData.mode : 'demo'}
-- Élévation: ${elevScale.toFixed(1)}×
-- Emprise GPS: ${gpxScale.toFixed(2)}×
-- Marge zone: ${(terrainMargin * 100).toFixed(0)}%
-- Base: ${baseThickness.toFixed(2)}
-- Zoom vue: ${zoomVal.toFixed(2)}×
-- Rotation H: ${rotH}°
-- Rotation V: ${rotV}°
-- Largeur chemin: ${traceWidth.toFixed(3)}
-- Hauteur chemin: ${traceHeight.toFixed(3)}
-- Couleur chemin: ${traceColor}
-- Plaque ligne 1: "${txt1}"
-- Plaque ligne 2: "${txt2}"`;
-      alert(summary);
-      pushConfigToParent();
-    }
-
-    function initThree() {
-      const wrap = document.getElementById('viewer');
-      const size = Math.max(320, wrap.clientWidth || 600);
-
-      renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setSize(size, size);
-      renderer.setClearColor(0x000000, 0);
-      renderer.outputEncoding = THREE.sRGBEncoding;
-
-      scene = new THREE.Scene();
-      scene.fog = new THREE.Fog(0xeef2f6, 10, 22);
-
-      camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
-
-      scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-      const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-      keyLight.position.set(4, 7, 3);
-      scene.add(keyLight);
-      const rimLight = new THREE.DirectionalLight(0xc8d7f0, 0.45);
-      rimLight.position.set(-3, 2, -4);
-      scene.add(rimLight);
-
-      const ground = new THREE.Mesh(
-        new THREE.CircleGeometry(18, 64),
-        new THREE.MeshBasicMaterial({ color: 0xe9eef4, transparent: true, opacity: 0.75 })
-      );
-      ground.rotation.x = -Math.PI / 2;
-      ground.position.y = -1.15;
-      scene.add(ground);
-
-      buildScene();
-      updateCamera();
-      animate();
-    }
-
-    document.getElementById('dropzone').addEventListener('click', () => {
-      document.getElementById('gpxinput').click();
-    });
-
-    document.getElementById('gpxinput').onchange = function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      pendingGPXFileName = file.name;
-      document.getElementById('filename').textContent = file.name + ' — prêt pour aperçu';
-      setStatus('GPX chargé, aperçu en attente');
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        pendingGPXText = ev.target.result;
-      };
-      reader.readAsText(file);
-    };
-
-    const dz = document.getElementById('dropzone');
-    dz.ondragover = e => { e.preventDefault(); dz.style.background = 'var(--panel2)'; };
-    dz.ondragleave = () => { dz.style.background = ''; };
-    dz.ondrop = e => {
-      e.preventDefault();
-      dz.style.background = '';
-      const file = e.dataTransfer.files[0];
-      if (file) {
-        const input = document.getElementById('gpxinput');
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change'));
+    } else {
+      for(let i=0;i<pos.count;i+=3){
+        const va=new THREE.Vector3(pos.getX(i),pos.getY(i),pos.getZ(i));
+        const vb=new THREE.Vector3(pos.getX(i+1),pos.getY(i+1),pos.getZ(i+1));
+        const vc=new THREE.Vector3(pos.getX(i+2),pos.getY(i+2),pos.getZ(i+2));
+        triangles.push([va,vb,vc]);
       }
-    };
+    }
+    geo.dispose();
+  }
 
-    document.getElementById('previewBtn').onclick = async function() {
-      if (!pendingGPXText) {
-        alert('Charge d’abord un fichier GPX.');
-        return;
-      }
-      setStatus('Calcul du relief…');
-      this.disabled = true;
-      try {
-        const pts = parseGPX(pendingGPXText);
-        if (pts.length <= 8) throw new Error('GPX invalide ou trop peu de points.');
-        filename = pendingGPXFileName;
-        gpxPoints = pts;
-        gpxStats = computeStats(pts);
-        txt2 = `${gpxStats.distanceKm.toFixed(1)} km · ${gpxStats.dPlus} m D+`;
-        document.getElementById('txt2').value = txt2;
-        document.getElementById('filename').textContent = filename;
-        updateStatsUI();
-        await buildScene();
-      } catch (err) {
-        alert(err.message || 'Erreur pendant l’aperçu.');
-        setStatus('Erreur d’aperçu');
-      } finally {
-        this.disabled = false;
-      }
-    };
+  // Encode STL binaire
+  const buf = new ArrayBuffer(80 + 4 + triangles.length*50);
+  const view = new DataView(buf);
+  // Header 80 bytes
+  const header = 'Relief3D — terrain alpin — relief3d.studio';
+  for(let i=0;i<80;i++) view.setUint8(i, i<header.length ? header.charCodeAt(i) : 0);
+  view.setUint32(80, triangles.length, true);
 
-    document.getElementById('elev').oninput = async function() {
-      elevScale = parseFloat(this.value);
-      document.getElementById('elevVal').textContent = elevScale.toFixed(1) + '×';
-      await buildScene();
-    };
-    document.getElementById('gpxScale').oninput = async function() {
-      gpxScale = parseFloat(this.value);
-      document.getElementById('gpxScaleVal').textContent = gpxScale.toFixed(2) + '×';
-      await buildScene();
-    };
-    document.getElementById('terrainMargin').oninput = async function() {
-      terrainMargin = parseFloat(this.value);
-      document.getElementById('terrainMarginVal').textContent = `${Math.round(terrainMargin * 100)}%`;
-      await buildScene();
-    };
-    document.getElementById('baseThickness').oninput = async function() {
-      baseThickness = parseFloat(this.value);
-      document.getElementById('baseThicknessVal').textContent = baseThickness.toFixed(2);
-      await buildScene();
-    };
-    document.getElementById('zoom').oninput = function() {
-      zoomVal = parseFloat(this.value);
-      document.getElementById('zoomVal').textContent = zoomVal.toFixed(2) + '×';
-      updateCamera();
-    };
-    document.getElementById('rotH').oninput = function() {
-      rotH = parseInt(this.value, 10);
-      document.getElementById('rotHVal').textContent = rotH + '°';
-      updateCamera();
-    };
-    document.getElementById('rotV').oninput = function() {
-      rotV = parseInt(this.value, 10);
-      document.getElementById('rotVVal').textContent = rotV + '°';
-      updateCamera();
-    };
-    document.getElementById('traceWidth').oninput = async function() {
-      traceWidth = parseFloat(this.value);
-      document.getElementById('traceWidthVal').textContent = traceWidth.toFixed(3);
-      await buildScene();
-    };
-    document.getElementById('traceHeight').oninput = async function() {
-      traceHeight = parseFloat(this.value);
-      document.getElementById('traceHeightVal').textContent = traceHeight.toFixed(3);
-      await buildScene();
-    };
-    document.getElementById('traceColor').onchange = async function() {
-      traceColor = this.value;
-      await buildScene();
-    };
-    document.getElementById('txt1').oninput = function() { txt1 = this.value; updatePlate(); };
-    document.getElementById('txt2').oninput = function() { txt2 = this.value; updatePlate(); };
-    document.getElementById('orderBtn').onclick = sendOrder;
+  let offset = 84;
+  const n = new THREE.Vector3();
+  for(const [a,b,c] of triangles){
+    // normale
+    const ab=new THREE.Vector3().subVectors(b,a);
+    const ac=new THREE.Vector3().subVectors(c,a);
+    n.crossVectors(ab,ac).normalize();
+    view.setFloat32(offset,   n.x, true); offset+=4;
+    view.setFloat32(offset,   n.y, true); offset+=4;
+    view.setFloat32(offset,   n.z, true); offset+=4;
+    for(const v of [a,b,c]){
+      view.setFloat32(offset, v.x*scale, true); offset+=4;
+      view.setFloat32(offset, v.y*scale, true); offset+=4;
+      view.setFloat32(offset, v.z*scale, true); offset+=4;
+    }
+    view.setUint16(offset, 0, true); offset+=2;
+  }
 
-    window.addEventListener('resize', () => {
-      if (!renderer || !camera) return;
-      const wrap = document.getElementById('viewer');
-      const size = Math.max(320, wrap.clientWidth || 600);
-      renderer.setSize(size, size);
-      camera.aspect = 1;
-      camera.updateProjectionMatrix();
-    });
+  const blob = new Blob([buf], {type:'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='terrain-alpin.stl'; a.click();
+  URL.revokeObjectURL(url);
+  setStatus('✓ STL exporté');
+}
 
-    window.addEventListener('load', async () => {
-      gpxStats = computeStats(DEMO_POINTS);
-      txt2 = `${gpxStats.distanceKm.toFixed(1)} km · ${gpxStats.dPlus} m D+`;
-      document.getElementById('txt2').value = txt2;
-      updateStatsUI();
-      initThree();
-    });
-  </script>
+function buildTopGeoForSTL(elevH, scale){
+  const geo = new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1);
+  geo.rotateX(-Math.PI/2);
+  const pos=geo.attributes.position;
+  for(let gy=0;gy<GRID;gy++) for(let gx=0;gx<GRID;gx++){
+    const idx=gy*GRID+gx;
+    pos.setY(idx, terrainData.heights[gy][gx]*elevH);
+  }
+  pos.needsUpdate=true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function buildBaseForSTL(baseY, scale){
+  const geo=new THREE.PlaneGeometry(SIZE,SIZE,1,1);
+  geo.rotateX(Math.PI/2);
+  const pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++) pos.setY(i,baseY);
+  pos.needsUpdate=true;
+  return geo;
+}
+
+function buildSideForSTL(side,elevH,baseY,scale){
+  const top=[];
+  if(side==='north') for(let x=0;x<GRID;x++) top.push({x,y:0,h:terrainData.heights[0][x]*elevH});
+  if(side==='south') for(let x=0;x<GRID;x++) top.push({x,y:GRID-1,h:terrainData.heights[GRID-1][x]*elevH});
+  if(side==='west')  for(let y=0;y<GRID;y++) top.push({x:0,y,h:terrainData.heights[y][0]*elevH});
+  if(side==='east')  for(let y=0;y<GRID;y++) top.push({x:GRID-1,y,h:terrainData.heights[y][GRID-1]*elevH});
+  const verts=[],idx=[];
+  for(let i=0;i<top.length;i++){
+    const p=top[i];
+    const nx=p.x/(GRID-1),ny=1-p.y/(GRID-1);
+    verts.push((nx-.5)*SIZE,p.h,(.5-ny)*SIZE, (nx-.5)*SIZE,baseY,(.5-ny)*SIZE);
+  }
+  for(let i=0;i<top.length-1;i++){
+    const a=i*2,b=a+1,c=a+2,d=a+3;
+    idx.push(a,b,c,c,b,d);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+
+function buildPathForSTL(elevH, scale){
+  const pathPts=terrainData.normalizedPath.map(p=>new THREE.Vector3(
+    (p.nx-.5)*SIZE, sampleHeight(p.nx,p.ny)*elevH, (.5-p.ny)*SIZE
+  ));
+  const step=Math.max(1,Math.floor(pathPts.length/300));
+  const reduced=[];
+  for(let i=0;i<pathPts.length;i+=step) reduced.push(pathPts[i]);
+  if(reduced[reduced.length-1]!==pathPts[pathPts.length-1]) reduced.push(pathPts[pathPts.length-1]);
+
+  const verts=[],idx=[];
+  for(let i=0;i<reduced.length;i++){
+    const p=reduced[i];
+    const prev=reduced[Math.max(0,i-1)],next=reduced[Math.min(reduced.length-1,i+1)];
+    const dir=new THREE.Vector3().subVectors(next,prev); dir.y=0;
+    if(dir.lengthSq()<1e-8) dir.set(1,0,0); dir.normalize();
+    const n=new THREE.Vector3(-dir.z,0,dir.x);
+    const hw=cfg.traceW/2;
+    const lb=p.clone().addScaledVector(n,hw), rb=p.clone().addScaledVector(n,-hw);
+    const lt=lb.clone(),rt=rb.clone(); lt.y+=cfg.traceH; rt.y+=cfg.traceH;
+    verts.push(lb.x,lb.y,lb.z, rb.x,rb.y,rb.z, lt.x,lt.y,lt.z, rt.x,rt.y,rt.z);
+  }
+  for(let i=0;i<reduced.length-1;i++){
+    const a=i*4,b=a+4;
+    idx.push(a+2,a+3,b+2,b+2,a+3,b+3,a,a+2,b,b,a+2,b+2,a+3,a+1,b+3,b+3,a+1,b+1);
+  }
+  idx.push(0,1,2,2,1,3);
+  const nm=(reduced.length-1)*4;
+  idx.push(nm+2,nm+1,nm,nm+3,nm+1,nm+2);
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+
+// ============================================================
+//  INTERFACE UTILISATEUR
+// ============================================================
+window.addEventListener('load',()=>{ initThree(); });
+
+// Sliders
+function bind(id, cfgKey, fmt, rebuild=true){
+  const el=$(id), val=$(id+'Val');
+  el.addEventListener('input',async()=>{
+    cfg[cfgKey]=parseFloat(el.value);
+    val.textContent=fmt(cfg[cfgKey]);
+    if(rebuild && terrainData) await buildScene();
+    else if(!rebuild) updateCamera();
+  });
+}
+bind('elev','elevScale',v=>v.toFixed(1));
+bind('base','baseThick',v=>v.toFixed(2));
+bind('margin','margin',v=>Math.round(v*100)+'%');
+bind('zoom','zoom',v=>v.toFixed(2)+'×',false);
+bind('rotH','rotH',v=>v+'°',false);
+bind('rotV','rotV',v=>v+'°',false);
+bind('traceW','traceW',v=>v.toFixed(3));
+bind('traceH','traceH',v=>v.toFixed(3));
+
+$('rotH').addEventListener('input',()=>updateCamera());
+$('rotV').addEventListener('input',()=>updateCamera());
+$('zoom').addEventListener('input',()=>updateCamera());
+
+// Textes plaque
+$('txt1').addEventListener('input',()=>{ cfg.txt1=$('txt1').value; updatePlate(); });
+$('txt2').addEventListener('input',()=>{ cfg.txt2=$('txt2').value; updatePlate(); });
+
+// Couleurs tracé
+document.querySelectorAll('.color-opt').forEach(el=>{
+  el.addEventListener('click',async()=>{
+    document.querySelectorAll('.color-opt').forEach(e=>e.classList.remove('active'));
+    el.classList.add('active');
+    cfg.traceColor=el.dataset.color;
+    if(terrainData) await buildScene();
+  });
+});
+
+// Upload GPX
+$('dropzone').addEventListener('click',()=>$('gpxinput').click());
+$('gpxinput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  pendingName=f.name;
+  $('fileInfo').style.display='block';
+  $('fileInfo').textContent='Fichier sélectionné : '+f.name;
+  $('previewBtn').disabled=false;
+  setStatus('GPX prêt — cliquer "Charger & aperçu"');
+  const r=new FileReader();
+  r.onload=ev=>{ pendingGPX=ev.target.result; };
+  r.readAsText(f);
+});
+
+const dz=$('dropzone');
+dz.addEventListener('dragover',e=>{ e.preventDefault(); dz.style.borderColor='#888'; });
+dz.addEventListener('dragleave',()=>{ dz.style.borderColor=''; });
+dz.addEventListener('drop',e=>{
+  e.preventDefault(); dz.style.borderColor='';
+  const f=e.dataTransfer.files[0]; if(!f) return;
+  const dt=new DataTransfer(); dt.items.add(f);
+  $('gpxinput').files=dt.files;
+  $('gpxinput').dispatchEvent(new Event('change'));
+});
+
+// Aperçu
+$('previewBtn').addEventListener('click',async function(){
+  if(!pendingGPX){ alert('Sélectionne d\'abord un fichier GPX.'); return; }
+  this.disabled=true;
+  setStatus('Parsing GPX…');
+  try {
+    const pts=parseGPX(pendingGPX);
+    if(pts.length<10) throw new Error('GPX invalide ou trop peu de points (min 10).');
+    gpxPoints=pts;
+    const stats=computeGPXStats(pts);
+    cfg.txt2=`${stats.distKm.toFixed(1)} km · ${stats.dPlus} m D+`;
+    $('txt2').value=cfg.txt2;
+    $('fileInfo').innerHTML=`<strong>${pendingName}</strong><br>
+      ${pts.length} points · ${stats.distKm.toFixed(1)} km · D+${stats.dPlus}m · D−${stats.dMinus}m`;
+    terrainData = await buildTerrainData(pts);
+    await buildScene();
+  } catch(err){
+    alert(err.message||'Erreur lors du chargement.');
+    setStatus('Erreur : '+err.message);
+  } finally { this.disabled=false; }
+});
+
+// STL
+$('stlBtn').addEventListener('click',exportSTL);
+
+// Commander
+$('orderBtn').addEventListener('click',()=>{
+  if(!terrainData){ alert('Configure d\'abord un terrain GPX.'); return; }
+  const stats=computeGPXStats(gpxPoints||[]);
+  alert(`=== Résumé commande ===\n\nFichier : ${pendingName||'démo'}\nMode terrain : ${terrainData.mode}\nBbox : ${terrainData.bbox.minLat.toFixed(4)}°N → ${terrainData.bbox.maxLat.toFixed(4)}°N\n\nDistance : ${stats.distKm.toFixed(1)} km\nD+ : ${stats.dPlus} m  D− : ${stats.dMinus} m\n\nÉlévation : ${cfg.elevScale}×\nZoom : ${cfg.zoom}×  Rot H : ${cfg.rotH}°  Incl : ${cfg.rotV}°\nTracé W : ${cfg.traceW}  H : ${cfg.traceH}  Col : ${cfg.traceColor}\n\nPlaque 1 : "${cfg.txt1}"\nPlaque 2 : "${cfg.txt2}"`);
+});
+
+// Resize
+window.addEventListener('resize',()=>{
+  if(!renderer||!camera) return;
+  const wrap=$('viewer'), w=wrap.clientWidth, h=wrap.clientHeight;
+  renderer.setSize(w,h);
+  camera.aspect=w/h;
+  camera.updateProjectionMatrix();
+});
+</script>
 </body>
 </html>
