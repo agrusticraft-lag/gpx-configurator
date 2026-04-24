@@ -699,25 +699,60 @@ $('txt1').addEventListener('input',()=>{ cfg.txt1=$('txt1').value; updatePlate()
 $('txt2').addEventListener('input',()=>{ cfg.txt2=$('txt2').value; updatePlate(); });
 
 // Upload GPX
-$('dropzone').addEventListener('click',()=>$('gpxinput').click());
-$('gpxinput').addEventListener('change',e=>{
-  const f=e.target.files[0]; if(!f) return;
-  pendingName=f.name;
-  $('finfo').style.display='block';
-  $('finfo').textContent='Fichier : '+f.name;
-  $('loadBtn').disabled=false;
+function handleGPXFile(f) {
+  if (!f) return;
+
+  console.log('Fichier GPX sélectionné :', f.name);
+
+  pendingName = f.name;
+
+  $('finfo').style.display = 'block';
+  $('finfo').textContent = 'Fichier : ' + f.name;
+
+  $('loadBtn').disabled = false;
   setStatus('GPX sélectionné → cliquer "Charger le terrain"');
-  const r=new FileReader(); r.onload=ev=>pendingGPX=ev.target.result; r.readAsText(f);
+
+  const r = new FileReader();
+
+  r.onload = ev => {
+    pendingGPX = ev.target.result;
+    console.log('GPX chargé en mémoire :', pendingGPX.length, 'caractères');
+  };
+
+  r.onerror = err => {
+    console.error('Erreur lecture GPX', err);
+    setStatus('Erreur lecture fichier GPX');
+  };
+
+  r.readAsText(f);
+}
+
+$('dropzone').addEventListener('click', () => {
+  $('gpxinput').click();
 });
-const dz=$('dropzone');
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='#666';});
-dz.addEventListener('dragleave',()=>{dz.style.borderColor='';});
-dz.addEventListener('drop',e=>{
-  e.preventDefault(); dz.style.borderColor='';
-  const f=e.dataTransfer.files[0]; if(!f) return;
-  const dt=new DataTransfer(); dt.items.add(f);
-  $('gpxinput').files=dt.files;
-  $('gpxinput').dispatchEvent(new Event('change'));
+
+$('gpxinput').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  handleGPXFile(f);
+});
+
+const dz = $('dropzone');
+
+dz.addEventListener('dragover', e => {
+  e.preventDefault();
+  dz.style.borderColor = '#666';
+});
+
+dz.addEventListener('dragleave', () => {
+  dz.style.borderColor = '';
+});
+
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.style.borderColor = '';
+
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  handleGPXFile(f);
 });
 
 // ── Bouton CHARGER ───────────────────────────────────────────
