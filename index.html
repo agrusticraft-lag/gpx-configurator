@@ -187,6 +187,7 @@ const GRID    = 128;
 const SIZE    = 6.0;
 const REAL_MM = 150;
 const FETCH_G = 22;    // 22×22 = 484 points → 5 batches
+  const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
 
 let gpxPoints      = null;
 let gpxBBox        = null;
@@ -318,39 +319,91 @@ const res = await fetch(url, {
 // Retourne heightmapCache : { heights[GRID][GRID] normalisé 0-1,
 //                             minEle, maxEle, eleRange, mode }
 async function loadHeightmap(bbox){
-  // Grille FETCH_G × FETCH_G sur toute la bbox  ← couvre le terrain AUTOUR du GPX
-  const pts=[];
-  for(let gy=0;gy<FETCH_G;gy++) for(let gx=0;gx<FETCH_G;gx++){
-    pts.push({
-      lat: bbox.minLat + (gy/(FETCH_G-1))*(bbox.maxLat-bbox.minLat),
-      lon: bbox.minLon + (gx/(FETCH_G-1))*(bbox.maxLon-bbox.minLon),
-    });
+
+  const zoom = 12; // précision (10-14 ok)
+  const size = 128;
+
+  // centre bbox
+  const lat = (bbox.minLat + bbox.maxLat) / 2;
+  const lon = (bbox.minLon + bbox.maxLon) / 2;
+
+  // conversion lat/lon → tile
+  function latLonToTile(lat, lon, z){
+    const n = Math.pow(2, z);
+    const xtile = Math.floor((lon + 180) / 360 * n);
+    const ytile = Math.floor(
+      (1 - Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180)) / Math.PI) / 2 * n
+    );
+    return {x: xtile, y: ytile};
   }
 
-  setProgress(2,'Connexion OpenTopoData SRTM 30m…');
-  const rawElevs = await fetchOpenTopo(pts);
-  setProgress(88,'Interpolation 128×128…');
+  const tile = latLonToTile(lat, lon, zoom);
 
-  // Grille basse résolution → bilinéaire → GRID×GRID
-  const coarse=Array.from({length:FETCH_G},(_,gy)=>
-    Array.from({length:FETCH_G},(_,gx)=>rawElevs[gy*FETCH_G+gx])
+  const token = "TON_TOKEN_MAPBOX_ICI";
+
+  const url = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${zoom}/${tile.x}/${tile.y}.pngraw?access_token=${token}`;
+
+  setStatus('Chargement terrain Mapbox…');
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = url;
+
+  await new Promise(res => img.onload = res);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+
+  const data = ctx.getImageData(0, 0, 256, 256).data;
+
+  const heights = [];
+
+  for(let y=0;y<size;y++){
+    heights[y] = [];
+    for(let x=0;x<size;x++){
+
+      const px = Math.floor(x / size * 256);
+      const py = Math.floor(y / size * 256);
+
+      const i = (py * 256 + px) * 4;
+
+      const R = data[i];
+      const G = data[i+1];
+      const B = data[i+2];
+
+      const elevation = -10000 + (R*256*256 + G*256 + B) * 0.1;
+
+      heights[y][x] = elevation;
+    }
+  }
+
+  // normalisation
+  let minE = Infinity, maxE = -Infinity;
+  for(const row of heights){
+    for(const v of row){
+      if(v < minE) minE = v;
+      if(v > maxE) maxE = v;
+    }
+  }
+
+  const range = maxE - minE || 1;
+
+  const normalized = heights.map(row =>
+    row.map(v => (v - minE) / range)
   );
-  const grid=Array.from({length:GRID},(_,gy)=>Array.from({length:GRID},(_,gx)=>{
-    const fx=gx/(GRID-1)*(FETCH_G-1), fy=gy/(GRID-1)*(FETCH_G-1);
-    const x0=Math.floor(fx),x1=Math.min(FETCH_G-1,x0+1);
-    const y0=Math.floor(fy),y1=Math.min(FETCH_G-1,y0+1);
-    const tx=fx-x0, ty=fy-y0;
-    return lerp(lerp(coarse[y0][x0],coarse[y0][x1],tx),lerp(coarse[y1][x0],coarse[y1][x1],tx),ty);
-  }));
 
-  // Normalisation + lissage
-  let minE=Infinity, maxE=-Infinity;
-  for(const row of grid) for(const v of row){if(v<minE)minE=v;if(v>maxE)maxE=v;}
-  const range=Math.max(1,maxE-minE);
-  const heights=smoothGrid(grid.map(row=>row.map(v=>(v-minE)/range)),3);
+  setStatus('✓ Terrain réel chargé');
 
-  setProgress(100,'Terrain chargé !');
-  return { heights, minEle:minE, maxEle:maxE, eleRange:range, mode:'real-srtm' };
+  return {
+    heights: normalized,
+    minEle: minE,
+    maxEle: maxE,
+    eleRange: range,
+    mode: 'real-mapbox'
+  };
 }
 
 function buildFallbackHeightmap(pts, bbox){
