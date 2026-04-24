@@ -283,8 +283,27 @@ async function fetchOpenTopo(latLons){
   for(let b=0;b<batches.length;b++){
     setProgress(5+Math.round((b/batches.length)*80),
       `OpenTopoData lot ${b+1}/${batches.length}…`);
-    const loc=batches[b].map(p=>`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join('|');
-    const res=await fetch(`https://api.opentopodata.org/v1/srtm30m?locations=${loc}`);
+const loc = batches[b]
+  .map(p => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`)
+  .join('|');
+
+const url = 'https://api.opentopodata.org/v1/srtm30m?' + new URLSearchParams({
+  locations: loc
+}).toString();
+
+const res = await fetch(url, {
+  method: 'GET',
+  mode: 'cors',
+  cache: 'no-store'
+});
+  locations: loc
+}).toString();
+
+const res = await fetch(url, {
+  method: 'GET',
+  mode: 'cors',
+  cache: 'no-store'
+});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const json=await res.json();
     if(json.status!=='OK') throw new Error(json.error||json.status);
