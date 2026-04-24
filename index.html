@@ -275,45 +275,7 @@ function smoothGrid(g, passes=3){
   return cur;
 }
 
-// ── OpenTopoData SRTM 30m ────────────────────────────────────
-async function fetchOpenTopo(latLons){
-  const BATCH=100, elevs=[];
-  const batches=[];
-  for(let i=0;i<latLons.length;i+=BATCH) batches.push(latLons.slice(i,i+BATCH));
 
-  for(let b=0;b<batches.length;b++){
-    setProgress(5+Math.round((b/batches.length)*80),
-      `OpenTopoData lot ${b+1}/${batches.length}…`);
-const loc = batches[b]
-  .map(p => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`)
-  .join('|');
-
-const url = 'https://api.opentopodata.org/v1/srtm30m?' + new URLSearchParams({
-  locations: loc
-}).toString();
-
-const res = await fetch(url, {
-  method: 'GET',
-  mode: 'cors',
-  cache: 'no-store'
-});
-  locations: loc
-}).toString();
-
-const res = await fetch(url, {
-  method: 'GET',
-  mode: 'cors',
-  cache: 'no-store'
-});
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json=await res.json();
-    if(json.status!=='OK') throw new Error(json.error||json.status);
-    for(const r of json.results) elevs.push(r.elevation ?? 0);
-    // Respecter le rate-limit 1 req/s
-    if(b < batches.length-1) await new Promise(r=>setTimeout(r,1150));
-  }
-  return elevs;
-}
 
 // ── Chargement terrain (une seule fois) ──────────────────────
 // Retourne heightmapCache : { heights[GRID][GRID] normalisé 0-1,
@@ -339,7 +301,7 @@ async function loadHeightmap(bbox){
 
   const tile = latLonToTile(lat, lon, zoom);
 
-  const token = "TON_TOKEN_MAPBOX_ICI";
+  const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
 
   const url = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${zoom}/${tile.x}/${tile.y}.pngraw?access_token=${token}`;
 
@@ -516,9 +478,9 @@ function buildScene(){
   if(normalizedPath) buildPath(elevH);
 
   updatePlate();
-  setStatus(heightmapCache.mode==='real-srtm'
-    ? `✓ SRTM réel  ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`
-    : '⚠ Fallback GPX (API indisponible)');
+setStatus(heightmapCache.mode === 'real-mapbox'
+  ? `✓ Terrain Mapbox réel ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`
+  : '⚠ Fallback GPX');
 }
 
 function buildSide(s,hm,elevH,baseY,mat){
@@ -802,8 +764,8 @@ $('loadBtn').addEventListener('click', async function(){
     $('orderBtn').disabled=false;
 
     badge.style.display='inline-block';
-    if(heightmapCache.mode==='real-srtm'){
-      badge.textContent=`✓ SRTM réel  ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`;
+    if(heightmapCache.mode==='real-mapbox'){
+    badge.textContent=`✓ Terrain Mapbox réel ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`;
       badge.className='real';
     } else {
       badge.textContent='⚠ Fallback GPX (API indisponible)';
