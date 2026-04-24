@@ -732,60 +732,58 @@ $('txt1').addEventListener('input',()=>{ cfg.txt1=$('txt1').value; updatePlate()
 $('txt2').addEventListener('input',()=>{ cfg.txt2=$('txt2').value; updatePlate(); });
 
 // Upload GPX
-function handleGPXFile(f) {
-  if (!f) return;
+function handleGPXFile(file) {
+  if (!file) {
+    console.warn('Aucun fichier GPX reçu');
+    return;
+  }
 
-  console.log('Fichier GPX sélectionné :', f.name);
-
-  pendingName = f.name;
+  pendingName = file.name;
 
   $('finfo').style.display = 'block';
-  $('finfo').textContent = 'Fichier : ' + f.name;
+  $('finfo').textContent = 'Fichier : ' + file.name;
 
   $('loadBtn').disabled = false;
   setStatus('GPX sélectionné → cliquer "Charger le terrain"');
 
-  const r = new FileReader();
+  const reader = new FileReader();
 
-  r.onload = ev => {
+  reader.onload = function(ev) {
     pendingGPX = ev.target.result;
-    console.log('GPX chargé en mémoire :', pendingGPX.length, 'caractères');
+    console.log('GPX chargé :', pendingName, pendingGPX.length);
   };
 
-  r.onerror = err => {
+  reader.onerror = function(err) {
     console.error('Erreur lecture GPX', err);
     setStatus('Erreur lecture fichier GPX');
   };
 
-  r.readAsText(f);
+  reader.readAsText(file);
 }
 
-$('dropzone').addEventListener('click', () => {
+$('dropzone').addEventListener('click', function() {
   $('gpxinput').click();
 });
 
-$('gpxinput').addEventListener('change', e => {
-  const f = e.target.files && e.target.files[0];
-  handleGPXFile(f);
+$('gpxinput').addEventListener('change', function(e) {
+  handleGPXFile(e.target.files[0]);
 });
 
 const dz = $('dropzone');
 
-dz.addEventListener('dragover', e => {
+dz.addEventListener('dragover', function(e) {
   e.preventDefault();
   dz.style.borderColor = '#666';
 });
 
-dz.addEventListener('dragleave', () => {
+dz.addEventListener('dragleave', function() {
   dz.style.borderColor = '';
 });
 
-dz.addEventListener('drop', e => {
+dz.addEventListener('drop', function(e) {
   e.preventDefault();
   dz.style.borderColor = '';
-
-  const f = e.dataTransfer.files && e.dataTransfer.files[0];
-  handleGPXFile(f);
+  handleGPXFile(e.dataTransfer.files[0]);
 });
 
 // ── Bouton CHARGER ───────────────────────────────────────────
