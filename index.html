@@ -183,7 +183,7 @@
 //    appelé par TOUS les sliders, INSTANTANÉ, SANS API
 //
 // ────────────────────────────────────────────────────────────
-const GRID    = 128;
+const GRID    = 256;
 const SIZE    = 6.0;
 const REAL_MM = 150;
 const FETCH_G = 22;    // 22×22 = 484 points → 5 batches
@@ -282,7 +282,7 @@ function smoothGrid(g, passes=3){
 //                             minEle, maxEle, eleRange, mode }
 async function loadHeightmap(bbox){
 
-  const zoom = 12; // précision (10-14 ok)
+  const zoom = 14; // précision (10-14 ok)
   const size = 128;
 
   // centre bbox
