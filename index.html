@@ -551,10 +551,6 @@ async function loadHeightmap(bbox){
 
   const resp = await fetch(url);
 
-
-
-
-
   if(!resp.ok){
     throw new Error(`OpenTopography HTTP ${resp.status}: ${await resp.text()}`);
   }
