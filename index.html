@@ -3,85 +3,271 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Relief3D — Configurateur terrain GPX</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+  <title>Relief3D — Configurateur terrain alpin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --ink:#1a1a18; --ink2:#4a4a44; --ink3:#8a8a80;
-      --bg:#f7f5f0; --bg2:#efede8; --bg3:#e5e3dc;
-      --line:rgba(26,26,24,.12); --accent:#2c5f2e; --r:6px;
+      --ink: #0d0d0b;
+      --ink2: #3a3a36;
+      --ink3: #7a7a72;
+      --bg: #f4f2ed;
+      --bg2: #eceae4;
+      --bg3: #e0ddd6;
+      --line: rgba(13,13,11,.10);
+      --accent: #d45000;
+      --accent2: #2c5f2e;
+      --r: 4px;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+      --display: 'Bebas Neue', sans-serif;
     }
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--ink);min-height:100vh}
-    #header{padding:16px 24px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:16px;background:var(--bg)}
-    #header h1{font-family:'Fraunces',serif;font-size:22px;font-weight:500}
-    #header .sub{font-size:11px;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase}
-    #app{display:grid;grid-template-columns:minmax(0,1fr) 330px;height:calc(100vh - 53px)}
-    #viewer{position:relative;background:#e0ddd6;overflow:hidden}
-    canvas{display:block;width:100%;height:100%}
-    #status{position:absolute;top:12px;left:12px;background:rgba(247,245,240,.95);border:1px solid var(--line);border-radius:999px;font-size:11px;padding:5px 11px;color:var(--ink2);letter-spacing:.03em;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    #plateOverlay{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(70,60,50,.82);text-shadow:0 1px 0 rgba(255,255,255,.5);pointer-events:none;line-height:1.7}
-    #sidebar{border-left:1px solid var(--line);overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
-    .section{padding:16px 18px;border-bottom:1px solid var(--line)}
-    .stitle{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin-bottom:12px;display:flex;align-items:center;gap:8px}
-    .stitle .step{width:17px;height:17px;border-radius:50%;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
-    .dropzone{border:1px dashed var(--bg3);border-radius:var(--r);padding:18px 14px;text-align:center;cursor:pointer;background:var(--bg2);transition:.15s}
-    .dropzone:hover{background:var(--bg3);border-color:var(--ink3)}
-    .dropzone strong{font-size:12px;display:block;margin-bottom:3px}
-    .dropzone p{font-size:11px;color:var(--ink3)}
-    .finfo{margin-top:9px;padding:7px 9px;background:var(--bg2);border-radius:var(--r);font-size:11px;color:var(--ink2);line-height:1.5;display:none}
-    .finfo strong{color:var(--ink)}
-    .row{display:grid;grid-template-columns:96px 1fr 50px;align-items:center;gap:7px;margin-bottom:9px}
-    .row label{font-size:11px;color:var(--ink3)}
-    .row .val{font-size:11px;text-align:right;color:var(--ink2)}
-    input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:var(--bg3);border-radius:2px;outline:none}
-    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--ink);cursor:pointer}
-    input[type=text],select{width:100%;padding:7px 9px;font-family:'DM Mono',monospace;font-size:11px;border:1px solid var(--line);background:var(--bg2);color:var(--ink);border-radius:var(--r);outline:none;margin-bottom:7px}
+    body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;overflow:hidden}
+
+    /* ── Header ── */
+    #header{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      height:52px;padding:0 24px;
+      display:flex;align-items:center;justify-content:space-between;
+      background:var(--ink);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    #header .logo{
+      font-family:var(--display);font-size:26px;letter-spacing:.04em;
+      color:#fff;display:flex;align-items:baseline;gap:10px;
+    }
+    #header .logo span{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;font-weight:300}
+    #header .badge{
+      font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5);
+      letter-spacing:.08em;text-transform:uppercase;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+      padding:4px 10px;border-radius:2px;
+    }
+
+    /* ── Layout ── */
+    #app{
+      display:grid;
+      grid-template-columns:1fr 340px;
+      height:calc(100vh - 52px);
+      margin-top:52px;
+    }
+
+    /* ── Viewer ── */
+    #viewer{
+      position:relative;
+      background:#1a1a17;
+      overflow:hidden;
+    }
+    #viewer canvas{display:block;width:100%;height:100%}
+
+    /* Status pill */
+    #status{
+      position:absolute;top:14px;left:14px;
+      background:rgba(13,13,11,.75);backdrop-filter:blur(8px);
+      border:1px solid rgba(255,255,255,.12);border-radius:2px;
+      font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.7);
+      padding:5px 12px;letter-spacing:.04em;
+      max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+
+    /* Stats overlay */
+    #statsOverlay{
+      position:absolute;top:14px;right:14px;
+      display:none;
+      font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.55);
+      background:rgba(13,13,11,.6);backdrop-filter:blur(8px);
+      border:1px solid rgba(255,255,255,.1);border-radius:2px;
+      padding:8px 12px;line-height:2;
+    }
+    #statsOverlay strong{color:rgba(255,255,255,.85);font-weight:500}
+
+    /* Plate overlay */
+    #plateOverlay{
+      position:absolute;bottom:20px;left:0;right:0;
+      text-align:center;pointer-events:none;
+      font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+      color:rgba(220,215,200,.75);text-shadow:0 1px 3px rgba(0,0,0,.5);
+      line-height:1.8;
+    }
+
+    /* Corner watermark */
+    #watermark{
+      position:absolute;bottom:16px;right:16px;
+      font-family:var(--display);font-size:18px;letter-spacing:.06em;
+      color:rgba(255,255,255,.08);pointer-events:none;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar{
+      border-left:1px solid var(--line);
+      overflow-y:auto;
+      background:var(--bg);
+      display:flex;flex-direction:column;
+    }
+    #sidebar::-webkit-scrollbar{width:4px}
+    #sidebar::-webkit-scrollbar-track{background:var(--bg2)}
+    #sidebar::-webkit-scrollbar-thumb{background:var(--bg3)}
+
+    .section{padding:14px 16px;border-bottom:1px solid var(--line)}
+
+    .stitle{
+      font-family:var(--mono);font-size:9px;text-transform:uppercase;
+      letter-spacing:.14em;color:var(--ink3);
+      margin-bottom:10px;display:flex;align-items:center;gap:8px;
+    }
+    .stitle .num{
+      width:16px;height:16px;border-radius:50%;
+      background:var(--ink);color:var(--bg);
+      display:flex;align-items:center;justify-content:center;
+      font-size:8px;flex-shrink:0;font-family:var(--mono);
+    }
+
+    /* Dropzone */
+    .dropzone{
+      border:1px dashed var(--bg3);border-radius:var(--r);
+      padding:16px 12px;text-align:center;cursor:pointer;
+      background:var(--bg2);transition:.15s;
+    }
+    .dropzone:hover,.dropzone.over{background:var(--bg3);border-color:var(--ink3)}
+    .dropzone .dicon{font-size:20px;margin-bottom:4px}
+    .dropzone strong{font-family:var(--sans);font-size:12px;font-weight:500;display:block;margin-bottom:2px}
+    .dropzone p{font-family:var(--mono);font-size:10px;color:var(--ink3)}
+
+    .finfo{
+      margin-top:8px;padding:7px 9px;background:var(--bg2);
+      border-radius:var(--r);font-family:var(--mono);font-size:10px;
+      color:var(--ink2);line-height:1.6;display:none;
+    }
+    .finfo strong{color:var(--ink);font-weight:500}
+
+    /* Progress */
+    #progWrap{display:none;margin-top:8px}
+    #progBar{height:2px;background:var(--bg3);border-radius:1px;overflow:hidden}
+    #progFill{height:100%;background:var(--accent);width:0%;transition:width .3s}
+    #progLbl{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:3px;letter-spacing:.04em}
+
+    /* Terrain badge */
+    #terrainBadge{
+      display:none;font-family:var(--mono);font-size:9px;
+      padding:3px 8px;border-radius:2px;margin-top:6px;letter-spacing:.04em;
+    }
+    #terrainBadge.real{background:#e8f5e9;color:#2c5f2e;border:1px solid #a5d6a7}
+    #terrainBadge.fallback{background:#fff8e1;color:#7a5c00;border:1px solid #ffe082}
+
+    /* Row sliders */
+    .row{display:grid;grid-template-columns:80px 1fr 46px;align-items:center;gap:6px;margin-bottom:7px}
+    .row label{font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:.03em}
+    .row .val{font-family:var(--mono);font-size:10px;text-align:right;color:var(--ink2)}
+
+    input[type=range]{
+      -webkit-appearance:none;width:100%;height:2px;
+      background:var(--bg3);border-radius:1px;outline:none;
+    }
+    input[type=range]::-webkit-slider-thumb{
+      -webkit-appearance:none;width:12px;height:12px;
+      border-radius:50%;background:var(--ink);cursor:pointer;
+      transition:transform .1s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+
+    input[type=text],select{
+      width:100%;padding:7px 9px;
+      font-family:var(--mono);font-size:11px;
+      border:1px solid var(--line);background:var(--bg2);
+      color:var(--ink);border-radius:var(--r);outline:none;
+      margin-bottom:6px;transition:.15s;
+    }
     input[type=text]:focus,select:focus{border-color:var(--accent)}
-    .btn{width:100%;padding:10px;border:none;border-radius:var(--r);font-family:'DM Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.04em;transition:.15s}
+
+    /* Buttons */
+    .btn{
+      width:100%;padding:10px;border:none;border-radius:var(--r);
+      font-family:var(--sans);font-size:12px;font-weight:600;
+      cursor:pointer;letter-spacing:.06em;text-transform:uppercase;
+      transition:.15s;
+    }
     .btn-dark{background:var(--ink);color:var(--bg)}
-    .btn-dark:hover{background:#333}
-    .btn-light{background:var(--bg2);color:var(--ink);border:1px solid var(--line);margin-top:7px}
+    .btn-dark:hover{background:#282826}
+    .btn-accent{background:var(--accent);color:#fff;margin-top:6px}
+    .btn-accent:hover{background:#b33e00}
+    .btn-green{background:var(--accent2);color:#fff;margin-top:6px}
+    .btn-green:hover{background:#224824}
+    .btn-light{background:var(--bg2);color:var(--ink);border:1px solid var(--line);margin-top:6px}
     .btn-light:hover{background:var(--bg3)}
-    .btn-green{background:var(--accent);color:#fff;margin-top:7px}
-    .btn-green:hover{background:#234f25}
-    .btn:disabled{opacity:.45;cursor:not-allowed}
-    .note{font-size:10px;color:var(--ink3);line-height:1.6;padding:7px 9px;background:var(--bg2);border-radius:var(--r);margin-top:9px}
+    .btn:disabled{opacity:.35;cursor:not-allowed}
+
+    /* Colors */
+    .clabel{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+    .cgrid{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+    .copt{
+      width:26px;height:26px;border-radius:3px;cursor:pointer;
+      border:2px solid transparent;transition:.12s;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .copt.active{border-color:var(--ink);transform:scale(1.1)}
+    .copt:hover{transform:scale(1.08)}
+
+    /* Palette terrain */
+    .pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px}
+    .popt{
+      border-radius:3px;cursor:pointer;border:2px solid transparent;
+      transition:.12s;height:28px;font-family:var(--mono);font-size:8px;
+      color:rgba(0,0,0,.5);display:flex;align-items:flex-end;
+      padding:2px 3px;overflow:hidden;position:relative;
+    }
+    .popt.active{border-color:var(--ink)}
+
+    /* Note */
+    .note{
+      font-family:var(--mono);font-size:9px;color:var(--ink3);
+      line-height:1.7;padding:7px 9px;background:var(--bg2);
+      border-radius:var(--r);margin-top:8px;letter-spacing:.02em;
+    }
     .note b{color:var(--ink2)}
-    #progWrap{display:none;margin-top:9px}
-    #progBar{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
-    #progFill{height:100%;background:var(--accent);width:0%;transition:width .25s}
-    #progLbl{font-size:10px;color:var(--ink3);margin-top:4px}
-    .cgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:4px}
-    .copt{aspect-ratio:1;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:.1s}
-    .copt.active{border-color:var(--ink)}
-    #terrainBadge{display:none;font-size:10px;padding:3px 8px;border-radius:999px;margin-top:8px;background:var(--bg2);color:var(--ink3);border:1px solid var(--line)}
-    #terrainBadge.real{background:#e8f5e9;color:#2c5f2e;border-color:#a5d6a7}
-    #terrainBadge.fallback{background:#fff8e1;color:#7a5c00;border-color:#ffe082}
-    @media(max-width:860px){
-      #app{grid-template-columns:1fr;height:auto}
-      #viewer{height:60vw;min-height:300px}
+
+    /* Size selector */
+    .size-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+    .size-opt{
+      padding:8px;border:1px solid var(--line);border-radius:var(--r);
+      cursor:pointer;text-align:center;background:var(--bg2);
+      font-family:var(--mono);font-size:10px;color:var(--ink2);
+      transition:.12s;
+    }
+    .size-opt.active{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+    .size-opt:hover:not(.active){background:var(--bg3)}
+    .size-opt strong{display:block;font-size:13px;font-weight:600;margin-bottom:1px}
+
+    @media(max-width:900px){
+      #app{grid-template-columns:1fr;height:auto;overflow:auto}
+      #viewer{height:65vw;min-height:320px}
+      body{overflow:auto}
     }
   </style>
 </head>
 <body>
+
 <div id="header">
-  <h1>Relief3D</h1>
-  <span class="sub">Configurateur terrain alpin</span>
+  <div class="logo">Relief3D <span>— Configurateur alpin</span></div>
+  <div class="badge">Beta · OpenTopography SRTM</div>
 </div>
+
 <div id="app">
   <div id="viewer">
     <canvas id="c"></canvas>
-    <div id="status">En attente d'un fichier GPX…</div>
+    <div id="status">⛰ En attente d'un fichier GPX…</div>
+    <div id="statsOverlay"></div>
     <div id="plateOverlay"></div>
+    <div id="watermark">RELIEF3D</div>
   </div>
 
   <div id="sidebar">
 
+    <!-- 1 · GPX -->
     <div class="section">
-      <div class="stitle"><span class="step">1</span>Fichier GPX</div>
+      <div class="stitle"><span class="num">1</span>Fichier GPX</div>
       <div class="dropzone" id="dropzone">
-        <strong>⛰ Choisir un fichier GPX</strong>
+        <div class="dicon">⛰</div>
+        <strong>Choisir un fichier GPX</strong>
         <p>ou glisser-déposer ici</p>
       </div>
       <input type="file" id="gpxinput" accept=".gpx" style="display:none">
@@ -91,29 +277,30 @@
         <div id="progLbl">Chargement…</div>
       </div>
       <div id="terrainBadge"></div>
-      <button class="btn btn-dark" id="loadBtn" style="margin-top:9px" disabled>
+      <button class="btn btn-dark" id="loadBtn" style="margin-top:8px" disabled>
         Charger le terrain →
       </button>
       <div class="note">
-        <b>Une seule fois :</b> les altitudes SRTM réelles sont chargées depuis OpenTopoData sur toute la zone autour du GPX (pas seulement le tracé). Ensuite, tous les sliders reconstruisent la scène <b>instantanément</b> depuis la heightmap en cache, sans rappel API.
+        <b>Données réelles :</b> altitudes SRTM GL3 via OpenTopography sur toute la bbox GPX. Ensuite les sliders reconstruisent instantanément depuis le cache — aucun appel réseau supplémentaire.
       </div>
     </div>
 
+    <!-- 2 · Relief -->
     <div class="section">
-      <div class="stitle"><span class="step">2</span>Relief &amp; vue</div>
+      <div class="stitle"><span class="num">2</span>Relief &amp; vue</div>
       <div class="row">
         <label>Élévation ×</label>
         <input type="range" id="elev" min="1" max="12" step="0.5" value="4">
         <span class="val" id="elevVal">4.0</span>
       </div>
       <div class="row">
-        <label>Base</label>
-        <input type="range" id="base" min="0.1" max="1.5" step="0.05" value="0.5">
+        <label>Base (mm)</label>
+        <input type="range" id="base" min="0.1" max="2.0" step="0.05" value="0.5">
         <span class="val" id="baseVal">0.50</span>
       </div>
       <div class="row">
-        <label>Zoom vue</label>
-        <input type="range" id="zoom" min="0.4" max="2.2" step="0.02" value="1.0">
+        <label>Zoom</label>
+        <input type="range" id="zoom" min="0.4" max="2.5" step="0.02" value="1.0">
         <span class="val" id="zoomVal">1.00×</span>
       </div>
       <div class="row">
@@ -128,40 +315,71 @@
       </div>
     </div>
 
+    <!-- 3 · Palette -->
     <div class="section">
-      <div class="stitle"><span class="step">3</span>Tracé GPX</div>
+      <div class="stitle"><span class="num">3</span>Palette terrain</div>
+      <div class="clabel">Ambiance</div>
+      <div class="pgrid" id="pgrid">
+        <div class="popt active" data-p="glacier" title="Glacier" style="background:linear-gradient(180deg,#dce8f0 0%,#7aaccc 50%,#3a6a85 100%)">Glacier</div>
+        <div class="popt" data-p="alpin" title="Alpin" style="background:linear-gradient(180deg,#f0ece0 0%,#a8b87a 50%,#4a6040 100%)">Alpin</div>
+        <div class="popt" data-p="sable" title="Sable" style="background:linear-gradient(180deg,#f5f0e8 0%,#d4b87a 50%,#8a6840 100%)">Sable</div>
+        <div class="popt" data-p="lave" title="Lave" style="background:linear-gradient(180deg,#f0f0f0 0%,#888888 50%,#282828 100%)">Lave</div>
+        <div class="popt" data-p="neige" title="Neige" style="background:linear-gradient(180deg,#ffffff 0%,#d8e8f0 50%,#9ab8cc 100%)">Neige</div>
+      </div>
+    </div>
+
+    <!-- 4 · Tracé -->
+    <div class="section">
+      <div class="stitle"><span class="num">4</span>Tracé GPX</div>
       <div class="row">
         <label>Largeur</label>
-        <input type="range" id="traceW" min="0.02" max="0.25" step="0.005" value="0.07">
+        <input type="range" id="traceW" min="0.02" max="0.30" step="0.005" value="0.07">
         <span class="val" id="traceWVal">0.070</span>
       </div>
       <div class="row">
         <label>Hauteur</label>
-        <input type="range" id="traceH" min="0.02" max="0.30" step="0.005" value="0.09">
+        <input type="range" id="traceH" min="0.02" max="0.40" step="0.005" value="0.09">
         <span class="val" id="traceHVal">0.090</span>
       </div>
-      <div style="font-size:10px;color:var(--ink3);margin-bottom:5px">Couleur</div>
+      <div class="clabel" style="margin-top:4px">Couleur</div>
       <div class="cgrid" id="cgrid">
         <div class="copt active" data-c="#d45000" style="background:#d45000" title="Orange"></div>
         <div class="copt" data-c="#cc1c1c" style="background:#cc1c1c" title="Rouge"></div>
         <div class="copt" data-c="#e8c200" style="background:#e8c200" title="Jaune"></div>
-        <div class="copt" data-c="#ffffff" style="background:#fff;border-color:#ccc" title="Blanc"></div>
+        <div class="copt" data-c="#ffffff" style="background:#fff;box-shadow:inset 0 0 0 1px #ccc" title="Blanc"></div>
         <div class="copt" data-c="#1a5fe8" style="background:#1a5fe8" title="Bleu"></div>
+        <div class="copt" data-c="#1db954" style="background:#1db954" title="Vert"></div>
+        <div class="copt" data-c="#e040fb" style="background:#e040fb" title="Violet"></div>
+        <div class="copt" data-c="#26c6da" style="background:#26c6da" title="Cyan"></div>
       </div>
     </div>
 
+    <!-- 5 · Plaque -->
     <div class="section">
-      <div class="stitle"><span class="step">4</span>Plaque</div>
-      <input type="text" id="txt1" value="Patrouille des Glaciers" placeholder="Ligne 1">
-      <input type="text" id="txt2" value="57.5 km · 4380 m D+" placeholder="Ligne 2">
+      <div class="stitle"><span class="num">5</span>Plaque gravée</div>
+      <input type="text" id="txt1" value="Patrouille des Glaciers" placeholder="Ligne 1 — Nom de la course">
+      <input type="text" id="txt2" value="57.5 km · 4380 m D+" placeholder="Ligne 2 — Stats">
+      <input type="text" id="txt3" value="" placeholder="Ligne 3 — Noms / Date (optionnel)">
     </div>
 
+    <!-- 6 · Taille -->
     <div class="section">
-      <div class="stitle"><span class="step">5</span>Export / Commande</div>
-      <button class="btn btn-green" id="stlBtn" disabled>Télécharger STL →</button>
-      <button class="btn btn-dark" id="orderBtn" style="margin-top:7px" disabled>Commander →</button>
+      <div class="stitle"><span class="num">6</span>Taille du modèle</div>
+      <div class="size-grid" id="sizeGrid">
+        <div class="size-opt" data-mm="100"><strong>10 cm</strong>100×100 mm</div>
+        <div class="size-opt active" data-mm="150"><strong>15 cm</strong>150×150 mm</div>
+        <div class="size-opt" data-mm="200"><strong>20 cm</strong>200×200 mm</div>
+        <div class="size-opt" data-mm="250"><strong>25 cm</strong>250×250 mm</div>
+      </div>
+    </div>
+
+    <!-- 7 · Export -->
+    <div class="section">
+      <div class="stitle"><span class="num">7</span>Export &amp; Commande</div>
+      <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger STL</button>
+      <button class="btn btn-green" id="orderBtn" disabled>Commander →</button>
       <div class="note" style="margin-top:8px">
-        STL = terrain + socle + tracé, prêt à slicer (0.15–0.2mm, 20% infill). Taille physique ~150×150mm.
+        STL prêt à slicer — terrain + socle + tracé. Recommandé : 0.15 mm, 20% infill, PLA mat.
       </div>
     </div>
 
@@ -170,52 +388,81 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ────────────────────────────────────────────────────────────
-//  ARCHITECTURE CLEF
-//
-//  loadBtn (clic unique) :
-//    1. parse GPX → bbox
-//    2. fetchOpenTopo → grille SRTM 22×22 → interpolée 128×128
-//    3. stocke dans heightmapCache  ← NE CHANGE PLUS
-//
-//  buildScene() :
-//    lit heightmapCache + cfg courant → reconstruit la géométrie
-//    appelé par TOUS les sliders, INSTANTANÉ, SANS API
-//
-// ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  RELIEF3D — Configurateur terrain alpin
+//  OpenTopography SRTM GL3 (réel) + fallback IDW
+// ══════════════════════════════════════════════════════════════
+
 const GRID    = 256;
 const SIZE    = 6.0;
-const REAL_MM = 150;
-const FETCH_G = 22;    // 22×22 = 484 points → 5 batches
-  const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
 
 let gpxPoints      = null;
 let gpxBBox        = null;
-let heightmapCache = null;   // heightmap brute normalisée, stockée une fois
-let normalizedPath = null;   // chemin GPX normalisé 0-1 sur la bbox
+let heightmapCache = null;
+let normalizedPath = null;
 let pendingGPX     = null;
 let pendingName    = '';
 let renderer, scene, camera, terrainGroup, pathObj;
+let currentSizeMm  = 150;
+
+// Palettes
+const PALETTES = {
+  glacier: [
+    [0.00, .260,.334,.380],
+    [0.18, .380,.490,.565],
+    [0.45, .560,.658,.730],
+    [0.72, .760,.820,.870],
+    [1.00, .920,.938,.950],
+  ],
+  alpin: [
+    [0.00, .290,.375,.250],
+    [0.18, .420,.490,.330],
+    [0.42, .570,.600,.460],
+    [0.70, .780,.758,.680],
+    [1.00, .950,.944,.920],
+  ],
+  sable: [
+    [0.00, .420,.340,.220],
+    [0.18, .560,.480,.330],
+    [0.42, .700,.628,.470],
+    [0.70, .840,.790,.640],
+    [1.00, .960,.950,.920],
+  ],
+  lave: [
+    [0.00, .120,.120,.115],
+    [0.18, .250,.248,.242],
+    [0.42, .440,.436,.428],
+    [0.70, .620,.618,.610],
+    [1.00, .940,.938,.932],
+  ],
+  neige: [
+    [0.00, .480,.580,.660],
+    [0.25, .680,.748,.800],
+    [0.55, .840,.880,.910],
+    [0.80, .940,.954,.964],
+    [1.00, .990,.993,.996],
+  ],
+};
+
+let currentPalette = 'glacier';
 
 let cfg = {
   elevScale: 4.0, baseThick: 0.5, margin: 0.20,
   zoom: 1.0, rotH: -30, rotV: 38,
   traceW: 0.07, traceH: 0.09, traceColor: '#d45000',
-  txt1: 'Patrouille des Glaciers', txt2: '57.5 km · 4380 m D+',
+  txt1: 'Patrouille des Glaciers', txt2: '57.5 km · 4380 m D+', txt3: '',
 };
 
-// ── Utilitaires ──────────────────────────────────────────────
 const $     = id => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const lerp  = (a,b,t) => a + (b-a)*t;
 
 function setStatus(t){ $('status').textContent = t; }
-
 function setProgress(pct, lbl){
   $('progWrap').style.display = 'block';
   $('progFill').style.width   = pct + '%';
   $('progLbl').textContent    = lbl;
-  if(pct >= 100) setTimeout(()=>{ $('progWrap').style.display='none'; }, 1600);
+  if(pct >= 100) setTimeout(()=>{ $('progWrap').style.display='none'; }, 1800);
 }
 
 function latLonDist(a,b,c,d){
@@ -257,10 +504,16 @@ function computeBBox(pts, m){
   let[mnLa,mxLa]=[Math.min(...lats),Math.max(...lats)];
   let[mnLo,mxLo]=[Math.min(...lons),Math.max(...lons)];
   const dLa=Math.max(1e-6,mxLa-mnLa), dLo=Math.max(1e-6,mxLo-mnLo);
-  return { minLat:mnLa-dLa*m, maxLat:mxLa+dLa*m, minLon:mnLo-dLo*m, maxLon:mxLo+dLo*m };
+  // Ensure square bbox
+  const dMax = Math.max(dLa, dLo);
+  const midLa = (mnLa+mxLa)/2, midLo = (mnLo+mxLo)/2;
+  return {
+    minLat: midLa - dMax*(0.5+m), maxLat: midLa + dMax*(0.5+m),
+    minLon: midLo - dMax*(0.5+m), maxLon: midLo + dMax*(0.5+m),
+  };
 }
 
-function smoothGrid(g, passes=3){
+function smoothGrid(g, passes=2){
   const H=g.length, W=g[0].length;
   let cur=g.map(r=>r.slice());
   for(let p=0;p<passes;p++){
@@ -275,118 +528,107 @@ function smoothGrid(g, passes=3){
   return cur;
 }
 
-
-
-// ── Chargement terrain (une seule fois) ──────────────────────
-// Retourne heightmapCache : { heights[GRID][GRID] normalisé 0-1,
-//                             minEle, maxEle, eleRange, mode }
+// ══════════════════════════════════════════════════════════════
+//  OPENTOPODATA — Terrain réel SRTM GL3
+//  API : https://api.opentopodata.org/v1/srtm30m
+//  Gratuit · 500 pts/req · 5 req/s · CORS OK
+// ══════════════════════════════════════════════════════════════
 async function loadHeightmap(bbox){
+  const N = 32; // grille 32×32 = 1024 pts → 3 batchs de ~340
+  setStatus('Génération grille d\'altitude SRTM…');
+  setProgress(5, 'Préparation des coordonnées…');
 
-  const zoom = 14; // précision (10-14 ok)
-  const size = GRID;
-  
-function tileToBounds(x, y, z) {
-  const n = Math.pow(2, z);
-
-  const lon1 = x / n * 360 - 180;
-  const lon2 = (x + 1) / n * 360 - 180;
-
-  const lat1 = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI;
-  const lat2 = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 1) / n))) * 180 / Math.PI;
-
-  return {
-    minLat: lat2,
-    maxLat: lat1,
-    minLon: lon1,
-    maxLon: lon2
-  };
-}
-  // centre bbox
-  const lat = (bbox.minLat + bbox.maxLat) / 2;
-  const lon = (bbox.minLon + bbox.maxLon) / 2;
-
-  // conversion lat/lon → tile
-  function latLonToTile(lat, lon, z){
-    const n = Math.pow(2, z);
-    const xtile = Math.floor((lon + 180) / 360 * n);
-    const ytile = Math.floor(
-      (1 - Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180)) / Math.PI) / 2 * n
-    );
-    return {x: xtile, y: ytile};
+  const lats = [], lons = [];
+  for(let gy = 0; gy < N; gy++){
+    for(let gx = 0; gx < N; gx++){
+      lats.push(bbox.minLat + (bbox.maxLat - bbox.minLat) * gy / (N-1));
+      lons.push(bbox.minLon + (bbox.maxLon - bbox.minLon) * gx / (N-1));
+    }
   }
 
-  const tile = latLonToTile(lat, lon, zoom);
-  const terrainBounds = tileToBounds(tile.x, tile.y, zoom);
-  const token = "pk.eyJ1IjoibGVvYWdydXN0aSIsImEiOiJjbW9jdHVVocnAwMm5hMnFxdmYzenFxaW13In0.dck7zD_KQgvnUwAELfvO6A";
+  const BATCH = 100; // 100 pts/requête (safe)
+  const elevations = new Array(N*N).fill(0);
+  const totalBatches = Math.ceil((N*N) / BATCH);
 
-  const url = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${zoom}/${tile.x}/${tile.y}.pngraw?access_token=${token}`;
+  for(let b = 0; b < totalBatches; b++){
+    const start = b * BATCH;
+    const end   = Math.min(start + BATCH, N*N);
+    const locs  = [];
+    for(let i = start; i < end; i++){
+      locs.push(`${lats[i].toFixed(6)},${lons[i].toFixed(6)}`);
+    }
 
-  setStatus('Chargement terrain Mapbox…');
+    setProgress(10 + (b / totalBatches) * 75, `Batch ${b+1}/${totalBatches} — OpenTopography SRTM GL3…`);
+    setStatus(`Chargement altitude… lot ${b+1}/${totalBatches}`);
 
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.src = url;
+    try {
+      const url = `https://api.opentopodata.org/v1/srtm30m?locations=${locs.join('|')}`;
+      const resp = await fetch(url);
+      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      if(json.status !== 'OK') throw new Error(json.error || 'API error');
 
-  await new Promise(res => img.onload = res);
+      for(let i = 0; i < json.results.length; i++){
+        elevations[start + i] = json.results[i].elevation ?? 0;
+      }
+    } catch(err) {
+      console.warn(`Batch ${b+1} failed:`, err.message);
+      // Fallback: interpolate from GPX
+      for(let i = start; i < end; i++) elevations[i] = null;
+    }
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0);
+    // Rate limit: 5 req/s
+    if(b < totalBatches - 1) await new Promise(r => setTimeout(r, 250));
+  }
 
-  const data = ctx.getImageData(0, 0, 256, 256).data;
+  // Reshape en grille N×N
+  const rawGrid = [];
+  for(let gy = 0; gy < N; gy++){
+    rawGrid[gy] = [];
+    for(let gx = 0; gx < N; gx++){
+      rawGrid[gy][gx] = elevations[gy*N + gx] ?? 0;
+    }
+  }
 
+  setProgress(90, 'Interpolation GRID×GRID…');
+
+  // Upscale N×N → GRID×GRID par interpolation bilinéaire
   const heights = [];
-
-  for(let y=0;y<size;y++){
-    heights[y] = [];
-    for(let x=0;x<size;x++){
-
-      const px = Math.floor(x / size * 256);
-      const py = Math.floor(y / size * 256);
-
-      const i = (py * 256 + px) * 4;
-
-      const R = data[i];
-      const G = data[i+1];
-      const B = data[i+2];
-
-      const elevation = -10000 + (R*256*256 + G*256 + B) * 0.1;
-
-      heights[y][x] = elevation;
+  for(let gy = 0; gy < GRID; gy++){
+    heights[gy] = [];
+    for(let gx = 0; gx < GRID; gx++){
+      const fx = gx / (GRID-1) * (N-1);
+      const fy = gy / (GRID-1) * (N-1);
+      const x0 = Math.floor(fx), x1 = Math.min(N-1, x0+1);
+      const y0 = Math.floor(fy), y1 = Math.min(N-1, y0+1);
+      const tx = fx - x0, ty = fy - y0;
+      heights[gy][gx] = lerp(
+        lerp(rawGrid[y0][x0], rawGrid[y0][x1], tx),
+        lerp(rawGrid[y1][x0], rawGrid[y1][x1], tx),
+        ty
+      );
     }
   }
 
-  // normalisation
+  // Lissage léger
+  const smoothed = smoothGrid(heights, 2);
+
   let minE = Infinity, maxE = -Infinity;
-  for(const row of heights){
-    for(const v of row){
-      if(v < minE) minE = v;
-      if(v > maxE) maxE = v;
-    }
+  for(const row of smoothed) for(const v of row){
+    if(v < minE) minE = v;
+    if(v > maxE) maxE = v;
   }
-
   const range = maxE - minE || 1;
+  const normalized = smoothed.map(row => row.map(v => (v - minE) / range));
 
-  const normalized = heights.map(row =>
-    row.map(v => (v - minE) / range)
-  );
+  setProgress(100, '✓ Terrain SRTM chargé');
+  setStatus(`✓ SRTM GL3 · ${minE.toFixed(0)}–${maxE.toFixed(0)} m`);
 
-  setStatus('✓ Terrain réel chargé');
-
-  return {
-    heights: normalized,
-    minEle: minE,
-    maxEle: maxE,
-    eleRange: range,
-    mode: 'real-mapbox',
-    bounds: terrainBounds,
-  };
+  return { heights: normalized, minEle: minE, maxEle: maxE, eleRange: range, mode: 'srtm-opentopodata' };
 }
 
+// ── Fallback IDW ──────────────────────────────────────────────
 function buildFallbackHeightmap(pts, bbox){
-  // IDW depuis les points GPX : uniquement si l'API est indisponible
   const norm=pts.map(p=>({
     nx:(p.lon-bbox.minLon)/(bbox.maxLon-bbox.minLon||1),
     ny:(p.lat-bbox.minLat)/(bbox.maxLat-bbox.minLat||1),
@@ -404,49 +646,24 @@ function buildFallbackHeightmap(pts, bbox){
     }
     return wh/wt;
   }));
-  return { heights:smoothGrid(grid,3), minEle:minE, maxEle:maxE, eleRange:range, mode:'fallback' };
+  return { heights:smoothGrid(grid,4), minEle:minE, maxEle:maxE, eleRange:range, mode:'fallback-idw' };
 }
 
-// ── Lecture hauteur à position normalisée ────────────────────
+// ── Lecture heightmap ─────────────────────────────────────────
 function sampleH(nx, ny){
-  if(!heightmapCache || !heightmapCache.heights) return 0;
-
-  const nxClamped = clamp(nx, 0, 1);
-  const nyClamped = clamp(ny, 0, 1);
-
-  const x = nxClamped * (GRID - 1);
-  const y = (1 - nyClamped) * (GRID - 1);
-
-  const x0 = Math.floor(x);
-  const x1 = Math.min(GRID - 1, x0 + 1);
-  const y0 = Math.floor(y);
-  const y1 = Math.min(GRID - 1, y0 + 1);
-
-  const row0 = heightmapCache.heights[y0];
-  const row1 = heightmapCache.heights[y1];
-
-  if(!row0 || !row1) return 0;
-
-  const tx = x - x0;
-  const ty = y - y0;
-
-  return lerp(
-    lerp(row0[x0], row0[x1], tx),
-    lerp(row1[x0], row1[x1], tx),
-    ty
-  );
+  if(!heightmapCache?.heights) return 0;
+  const x = clamp(nx,0,1) * (GRID-1);
+  const y = (1 - clamp(ny,0,1)) * (GRID-1);
+  const x0=Math.floor(x), x1=Math.min(GRID-1,x0+1);
+  const y0=Math.floor(y), y1=Math.min(GRID-1,y0+1);
+  const r0=heightmapCache.heights[y0], r1=heightmapCache.heights[y1];
+  if(!r0||!r1) return 0;
+  return lerp(lerp(r0[x0],r0[x1],x-x0), lerp(r1[x0],r1[x1],x-x0), y-y0);
 }
 
-// ── Palette couleur ──────────────────────────────────────────
+// ── Couleur palette ───────────────────────────────────────────
 function heightColor(h){
-  // vert-gris foncé (vallée) → beige-blanc (sommet)
-  const stops=[
-    [0.00, .325,.370,.325],
-    [0.18, .462,.508,.432],
-    [0.42, .648,.632,.570],
-    [0.70, .820,.798,.740],
-    [1.00, .948,.940,.920],
-  ];
+  const stops = PALETTES[currentPalette] || PALETTES.glacier;
   for(let i=1;i<stops.length;i++){
     if(h<=stops[i][0]){
       const t=(h-stops[i-1][0])/(stops[i][0]-stops[i-1][0]||1);
@@ -457,10 +674,11 @@ function heightColor(h){
       );
     }
   }
-  return new THREE.Color(.95,.94,.92);
+  const s=stops[stops.length-1];
+  return new THREE.Color(s[1],s[2],s[3]);
 }
 
-// ── Scene Three.js ───────────────────────────────────────────
+// ── Three.js ──────────────────────────────────────────────────
 function clearObj(o){
   if(!o) return;
   while(o.children.length){const c=o.children[0];clearObj(c);o.remove(c);}
@@ -468,52 +686,49 @@ function clearObj(o){
   if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());
 }
 
-// buildScene : lecture heightmapCache + cfg, AUCUN appel réseau
 function buildScene(){
   if(!scene || !heightmapCache) return;
   if(terrainGroup){clearObj(terrainGroup);scene.remove(terrainGroup);}
   if(pathObj){clearObj(pathObj);scene.remove(pathObj);}
 
-  const hm     = heightmapCache.heights;
-  const elevH  = 1.8*(cfg.elevScale/4);
-  const baseY  = -cfg.baseThick;
+  const hm    = heightmapCache.heights;
+  const elevH = 1.8*(cfg.elevScale/4);
+  const baseY = -cfg.baseThick;
   terrainGroup = new THREE.Group();
 
-  // Surface
-  const geo=new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1);
+  // ─ Surface ─
+  const geo = new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1);
   geo.rotateX(-Math.PI/2);
-  const pos=geo.attributes.position;
-  const cols=[];
+  const pos = geo.attributes.position;
+  const cols = [];
   for(let gy=0;gy<GRID;gy++) for(let gx=0;gx<GRID;gx++){
-    const h=hm[gy][gx];
+    const h = hm[gy][gx];
     pos.setY(gy*GRID+gx, h*elevH);
-    const c=heightColor(h); cols.push(c.r,c.g,c.b);
+    const c = heightColor(h); cols.push(c.r,c.g,c.b);
   }
   geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
   geo.computeVertexNormals();
-  terrainGroup.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.95,metalness:.01})));
+  terrainGroup.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({
+    vertexColors:true,roughness:.92,metalness:.02
+  })));
 
-  // Flancs
-  const sideMat=new THREE.MeshStandardMaterial({color:0xcec5b4,roughness:.99});
+  // ─ Flancs ─
+  const sideMat = new THREE.MeshStandardMaterial({color:0xc8bfb0,roughness:.99});
   for(const s of ['N','S','W','E']) terrainGroup.add(buildSide(s,hm,elevH,baseY,sideMat));
 
-  // Fond
-  const bot=new THREE.Mesh(
+  // ─ Fond ─
+  const bot = new THREE.Mesh(
     new THREE.BoxGeometry(SIZE,.001,SIZE),
-    new THREE.MeshStandardMaterial({color:0xe0d6c4})
+    new THREE.MeshStandardMaterial({color:0xd4cabc})
   );
   bot.position.set(0,baseY-.0005,0);
   terrainGroup.add(bot);
 
   scene.add(terrainGroup);
 
-  // Tracé GPX
   if(normalizedPath) buildPath(elevH);
-
   updatePlate();
-setStatus(heightmapCache.mode === 'real-mapbox'
-  ? `✓ Terrain Mapbox réel ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`
-  : '⚠ Fallback GPX');
+  updateStats();
 }
 
 function buildSide(s,hm,elevH,baseY,mat){
@@ -539,7 +754,7 @@ function buildPath(elevH){
   const pts=normalizedPath.map(p=>new THREE.Vector3(
     (p.nx-.5)*SIZE, sampleH(p.nx,p.ny)*elevH, (.5-p.ny)*SIZE
   ));
-  const step=Math.max(1,Math.floor(pts.length/260));
+  const step=Math.max(1,Math.floor(pts.length/280));
   const red=[];
   for(let i=0;i<pts.length;i+=step) red.push(pts[i]);
   if(red[red.length-1]!==pts[pts.length-1]) red.push(pts[pts.length-1]);
@@ -552,56 +767,86 @@ function buildPath(elevH){
     const n=new THREE.Vector3(-dir.z,0,dir.x), hw=cfg.traceW/2;
     const lb=p.clone().addScaledVector(n,hw), rb=p.clone().addScaledVector(n,-hw);
     const lt=lb.clone(), rt=rb.clone(); lt.y+=cfg.traceH; rt.y+=cfg.traceH;
-    verts.push(lb.x,lb.y,lb.z, rb.x,rb.y,rb.z, lt.x,lt.y,lt.z, rt.x,rt.y,rt.z);
+    verts.push(lb.x,lb.y,lb.z,rb.x,rb.y,rb.z,lt.x,lt.y,lt.z,rt.x,rt.y,rt.z);
   }
   for(let i=0;i<red.length-1;i++){
     const a=i*4,b=a+4;
-    idx.push(a+2,a+3,b+2, b+2,a+3,b+3,  a,a+2,b, b,a+2,b+2,  a+3,a+1,b+3, b+3,a+1,b+1);
+    idx.push(a+2,a+3,b+2,b+2,a+3,b+3, a,a+2,b,b,a+2,b+2, a+3,a+1,b+3,b+3,a+1,b+1);
   }
   idx.push(0,1,2,2,1,3);
-  const nm=(red.length-1)*4; idx.push(nm+2,nm+1,nm, nm+3,nm+1,nm+2);
+  const nm=(red.length-1)*4; idx.push(nm+2,nm+1,nm,nm+3,nm+1,nm+2);
   const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
   g.setIndex(idx); g.computeVertexNormals();
   pathObj=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
-    color:new THREE.Color(cfg.traceColor),roughness:.5,metalness:.05
+    color:new THREE.Color(cfg.traceColor),roughness:.45,metalness:.05
   }));
   scene.add(pathObj);
 }
 
 function updateCamera(){
   const rH=cfg.rotH*Math.PI/180, rV=cfg.rotV*Math.PI/180, dist=11/cfg.zoom;
-  camera.position.set(Math.sin(rH)*Math.cos(rV)*dist, Math.sin(rV)*dist, Math.cos(rH)*Math.cos(rV)*dist);
+  camera.position.set(
+    Math.sin(rH)*Math.cos(rV)*dist,
+    Math.sin(rV)*dist,
+    Math.cos(rH)*Math.cos(rV)*dist
+  );
   camera.lookAt(0,.5,0);
 }
-function updatePlate(){ $('plateOverlay').innerHTML=[cfg.txt1,cfg.txt2].filter(Boolean).join('<br>'); }
+
+function updatePlate(){
+  const lines = [cfg.txt1, cfg.txt2, cfg.txt3].filter(Boolean);
+  $('plateOverlay').innerHTML = lines.join('<br>');
+}
+
+function updateStats(){
+  if(!gpxPoints || !heightmapCache) return;
+  const s = gpxStats(gpxPoints);
+  const el = $('statsOverlay');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <strong>${s.distKm.toFixed(1)} km</strong> distance<br>
+    <strong>D+ ${s.dPlus} m</strong> dénivelé<br>
+    <strong>${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m</strong> altitude
+  `;
+}
+
 function animate(){ requestAnimationFrame(animate); renderer.render(scene,camera); }
 
 function initThree(){
-  const wrap=$('viewer'), w=wrap.clientWidth||700, h=wrap.clientHeight||600;
+  const wrap=$('viewer'), w=wrap.clientWidth||800, h=wrap.clientHeight||600;
   renderer=new THREE.WebGLRenderer({canvas:$('c'),antialias:true,alpha:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.setSize(w,h);
-  renderer.setClearColor(0,0);
+  renderer.setClearColor(0x1a1a17,1);
   renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.shadowMap.enabled=true;
   scene=new THREE.Scene();
-  scene.fog=new THREE.Fog(0xdbd8d0,13,26);
+  scene.fog=new THREE.Fog(0x1a1a17,14,28);
   camera=new THREE.PerspectiveCamera(40,w/h,.1,1000);
-  scene.add(new THREE.AmbientLight(0xffffff,.82));
-  const key=new THREE.DirectionalLight(0xffffff,1.15); key.position.set(5,8,3); scene.add(key);
-  const rim=new THREE.DirectionalLight(0xccd8e8,.38); rim.position.set(-3,2,-5); scene.add(rim);
-  const gnd=new THREE.Mesh(new THREE.CircleGeometry(20,64),new THREE.MeshBasicMaterial({color:0xd0ccc4,transparent:true,opacity:.5}));
-  gnd.rotation.x=-Math.PI/2; gnd.position.y=-1.5; scene.add(gnd);
-  updateCamera(); animate();
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff,.65));
+  const key=new THREE.DirectionalLight(0xfff8f0,1.2); key.position.set(5,8,3); scene.add(key);
+  const rim=new THREE.DirectionalLight(0x8ab0d0,.35); rim.position.set(-4,2,-6); scene.add(rim);
+  const fill=new THREE.DirectionalLight(0xffffff,.2); fill.position.set(0,4,-5); scene.add(fill);
+
+  updateCamera();
+  animate();
 }
 
-// ── Export STL binaire ───────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  EXPORT STL BINAIRE
+// ══════════════════════════════════════════════════════════════
 function exportSTL(){
-  if(!heightmapCache){ alert('Charge d\'abord un GPX.'); return; }
-  setStatus('Génération STL…');
-  const scale=REAL_MM/SIZE, elevH=1.8*(cfg.elevScale/4), baseY=-cfg.baseThick;
-  const hm=heightmapCache.heights;
-  const tris=[];
+  if(!heightmapCache){ alert('Charge d\'abord un fichier GPX.'); return; }
+  setStatus('Génération STL en cours…');
+
+  const scale  = currentSizeMm / SIZE;
+  const elevH  = 1.8*(cfg.elevScale/4);
+  const baseY  = -cfg.baseThick;
+  const hm     = heightmapCache.heights;
+  const tris   = [];
 
   function collectGeo(geo){
     const pos=geo.attributes.position, ix=geo.index;
@@ -614,13 +859,14 @@ function exportSTL(){
     geo.dispose();
   }
 
-  // Top
+  // Surface du terrain
   const tg=new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1); tg.rotateX(-Math.PI/2);
   const tp=tg.attributes.position;
-  for(let gy=0;gy<GRID;gy++) for(let gx=0;gx<GRID;gx++) tp.setY(gy*GRID+gx, hm[gy][gx]*elevH);
+  for(let gy=0;gy<GRID;gy++) for(let gx=0;gx<GRID;gx++)
+    tp.setY(gy*GRID+gx, hm[gy][gx]*elevH);
   tp.needsUpdate=true; tg.computeVertexNormals(); collectGeo(tg);
 
-  // Fond
+  // Face inférieure
   const bg=new THREE.PlaneGeometry(SIZE,SIZE,1,1); bg.rotateX(Math.PI/2);
   const bp=bg.attributes.position;
   for(let i=0;i<bp.count;i++) bp.setY(i,baseY);
@@ -644,10 +890,12 @@ function exportSTL(){
     g.setIndex(idx); collectGeo(g);
   }
 
-  // Tracé
+  // Tracé GPX
   if(normalizedPath){
-    const pts=normalizedPath.map(p=>new THREE.Vector3((p.nx-.5)*SIZE,sampleH(p.nx,p.ny)*elevH,(.5-p.ny)*SIZE));
-    const step=Math.max(1,Math.floor(pts.length/300));
+    const pts=normalizedPath.map(p=>new THREE.Vector3(
+      (p.nx-.5)*SIZE, sampleH(p.nx,p.ny)*elevH, (.5-p.ny)*SIZE
+    ));
+    const step=Math.max(1,Math.floor(pts.length/350));
     const red=[];
     for(let i=0;i<pts.length;i+=step) red.push(pts[i]);
     if(red[red.length-1]!==pts[pts.length-1]) red.push(pts[pts.length-1]);
@@ -661,7 +909,9 @@ function exportSTL(){
       const lt=lb.clone(),rt=rb.clone(); lt.y+=cfg.traceH; rt.y+=cfg.traceH;
       verts.push(lb.x,lb.y,lb.z,rb.x,rb.y,rb.z,lt.x,lt.y,lt.z,rt.x,rt.y,rt.z);
     }
-    for(let i=0;i<red.length-1;i++){const a=i*4,b=a+4;idx.push(a+2,a+3,b+2,b+2,a+3,b+3,a,a+2,b,b,a+2,b+2,a+3,a+1,b+3,b+3,a+1,b+1);}
+    for(let i=0;i<red.length-1;i++){const a=i*4,b=a+4;
+      idx.push(a+2,a+3,b+2,b+2,a+3,b+3,a,a+2,b,b,a+2,b+2,a+3,a+1,b+3,b+3,a+1,b+1);
+    }
     idx.push(0,1,2,2,1,3);
     const nm=(red.length-1)*4; idx.push(nm+2,nm+1,nm,nm+3,nm+1,nm+2);
     const pg=new THREE.BufferGeometry();
@@ -669,31 +919,36 @@ function exportSTL(){
     pg.setIndex(idx); collectGeo(pg);
   }
 
-  // Encode STL binaire
+  // ─ Encode STL binaire ─
   const buf=new ArrayBuffer(80+4+tris.length*50);
   const dv=new DataView(buf);
-  const hdr='Relief3D terrain alpin — relief3d.studio';
+  const hdr=`Relief3D — ${cfg.txt1} — relief3d.studio`;
   for(let i=0;i<80;i++) dv.setUint8(i,i<hdr.length?hdr.charCodeAt(i):0);
   dv.setUint32(80,tris.length,true);
   let off=84;
   const nv=new THREE.Vector3();
   for(const[a,b,c] of tris){
     nv.crossVectors(new THREE.Vector3().subVectors(b,a),new THREE.Vector3().subVectors(c,a)).normalize();
-    for(const v of [nv,a,b,c]){dv.setFloat32(off,v.x*scale,true);off+=4;dv.setFloat32(off,v.y*scale,true);off+=4;dv.setFloat32(off,v.z*scale,true);off+=4;}
-    dv.setUint16(off,0,true); off+=2;
+    for(const v of [nv,a,b,c]){
+      dv.setFloat32(off,v.x*scale,true);off+=4;
+      dv.setFloat32(off,v.y*scale,true);off+=4;
+      dv.setFloat32(off,v.z*scale,true);off+=4;
+    }
+    dv.setUint16(off,0,true);off+=2;
   }
   const blob=new Blob([buf],{type:'application/octet-stream'});
   const url=URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'),{href:url,download:'terrain-alpin.stl'}).click();
+  Object.assign(document.createElement('a'),{href:url,download:`terrain-${cfg.txt1.replace(/\s+/g,'-').toLowerCase()}-${currentSizeMm}mm.stl`}).click();
   URL.revokeObjectURL(url);
-  setStatus('✓ STL téléchargé');
+  setStatus(`✓ STL exporté — ${tris.length} triangles · ${currentSizeMm}×${currentSizeMm} mm`);
 }
 
-// ── Bindings UI ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  UI BINDINGS
+// ══════════════════════════════════════════════════════════════
 window.addEventListener('load', initThree);
 
-// Sliders "rebuild scène" — AUCUN appel API
-function bindRebuild(id,key,fmt){
+function bindRebuild(id, key, fmt){
   const el=$(id), val=$(id+'Val');
   el.addEventListener('input',()=>{
     cfg[key]=parseFloat(el.value);
@@ -701,8 +956,7 @@ function bindRebuild(id,key,fmt){
     if(heightmapCache) buildScene();
   });
 }
-// Sliders "caméra seulement" — ultra-rapide
-function bindCam(id,key,fmt){
+function bindCam(id, key, fmt){
   const el=$(id), val=$(id+'Val');
   el.addEventListener('input',()=>{
     cfg[key]=parseFloat(el.value);
@@ -727,77 +981,62 @@ $('cgrid').querySelectorAll('.copt').forEach(el=>el.addEventListener('click',()=
   if(heightmapCache) buildScene();
 }));
 
+// Palette terrain
+$('pgrid').querySelectorAll('.popt').forEach(el=>el.addEventListener('click',()=>{
+  $('pgrid').querySelectorAll('.popt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  currentPalette=el.dataset.p;
+  if(heightmapCache) buildScene();
+}));
+
 // Plaque
 $('txt1').addEventListener('input',()=>{ cfg.txt1=$('txt1').value; updatePlate(); });
 $('txt2').addEventListener('input',()=>{ cfg.txt2=$('txt2').value; updatePlate(); });
+$('txt3').addEventListener('input',()=>{ cfg.txt3=$('txt3').value; updatePlate(); });
 
-// Upload GPX
-function handleGPXFile(file) {
-  if (!file) {
-    console.warn('Aucun fichier GPX reçu');
-    return;
-  }
+// Taille modèle
+$('sizeGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('click',()=>{
+  $('sizeGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  currentSizeMm = parseInt(el.dataset.mm);
+}));
 
+// ── GPX Upload ────────────────────────────────────────────────
+function handleGPXFile(file){
+  if(!file) return;
   pendingName = file.name;
+  $('finfo').style.display='block';
+  $('finfo').innerHTML=`<strong>${file.name}</strong> — lecture en cours…`;
+  $('loadBtn').disabled=false;
+  setStatus('GPX prêt → cliquer "Charger le terrain"');
 
-  $('finfo').style.display = 'block';
-  $('finfo').textContent = 'Fichier : ' + file.name;
-
-  $('loadBtn').disabled = false;
-  setStatus('GPX sélectionné → cliquer "Charger le terrain"');
-
-  const reader = new FileReader();
-
-  reader.onload = function(ev) {
-    pendingGPX = ev.target.result;
-    console.log('GPX chargé :', pendingName, pendingGPX.length);
-  };
-
-  reader.onerror = function(err) {
-    console.error('Erreur lecture GPX', err);
-    setStatus('Erreur lecture fichier GPX');
-  };
-
+  const reader=new FileReader();
+  reader.onload=ev=>{ pendingGPX=ev.target.result; };
+  reader.onerror=()=>setStatus('Erreur lecture fichier GPX');
   reader.readAsText(file);
 }
 
-$('dropzone').addEventListener('click', function() {
-  $('gpxinput').click();
-});
+$('dropzone').addEventListener('click',()=>$('gpxinput').click());
+$('gpxinput').addEventListener('change',e=>handleGPXFile(e.target.files[0]));
 
-$('gpxinput').addEventListener('change', function(e) {
-  handleGPXFile(e.target.files[0]);
-});
+const dz=$('dropzone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleGPXFile(e.dataTransfer.files[0]);});
 
-const dz = $('dropzone');
-
-dz.addEventListener('dragover', function(e) {
-  e.preventDefault();
-  dz.style.borderColor = '#666';
-});
-
-dz.addEventListener('dragleave', function() {
-  dz.style.borderColor = '';
-});
-
-dz.addEventListener('drop', function(e) {
-  e.preventDefault();
-  dz.style.borderColor = '';
-  handleGPXFile(e.dataTransfer.files[0]);
-});
-
-// ── Bouton CHARGER ───────────────────────────────────────────
+// ── Bouton Charger ────────────────────────────────────────────
 $('loadBtn').addEventListener('click', async function(){
   if(!pendingGPX){ alert('Sélectionne d\'abord un fichier GPX.'); return; }
   this.disabled=true;
   heightmapCache=null; normalizedPath=null;
   $('stlBtn').disabled=true; $('orderBtn').disabled=true;
+  $('statsOverlay').style.display='none';
   const badge=$('terrainBadge'); badge.style.display='none';
 
   try {
     setStatus('Parsing GPX…');
     const pts=parseGPX(pendingGPX);
-    if(pts.length<10) throw new Error('GPX invalide ou moins de 10 points.');
+    if(pts.length<10) throw new Error('GPX invalide (moins de 10 points).');
     gpxPoints=pts;
 
     const r500=resample(pts,500);
@@ -806,25 +1045,23 @@ $('loadBtn').addEventListener('click', async function(){
     const stats=gpxStats(pts);
     cfg.txt2=`${stats.distKm.toFixed(1)} km · ${stats.dPlus} m D+`;
     $('txt2').value=cfg.txt2;
-    $('finfo').innerHTML=`<strong>${pendingName}</strong><br>`
-      +`${pts.length} pts · ${stats.distKm.toFixed(1)} km · D+${stats.dPlus}m · D−${stats.dMinus}m`;
+    $('finfo').innerHTML=
+      `<strong>${pendingName}</strong><br>` +
+      `${pts.length} pts · ${stats.distKm.toFixed(1)} km · D+${stats.dPlus} m · D−${stats.dMinus} m`;
 
-    // ─── APPEL API (UNE SEULE FOIS) ───────────────────────────
+    // ─ API OpenTopography ─
     try {
       heightmapCache = await loadHeightmap(gpxBBox);
     } catch(err){
-      console.warn('OpenTopoData indisponible, fallback IDW:', err.message);
+      console.warn('OpenTopography indisponible, fallback IDW:', err.message);
       heightmapCache = buildFallbackHeightmap(r500, gpxBBox);
     }
-    // ──────────────────────────────────────────────────────────
 
-    // Normaliser le chemin sur la bbox (coordonnées 0-1)
-const pathBounds = heightmapCache.bounds || gpxBBox;
-
-normalizedPath = r500.map(p => ({
-  nx: clamp((p.lon - gpxBBox.minLon) / (gpxBBox.maxLon - gpxBBox.minLon || 1), 0, 1),
-  ny: clamp((p.lat - gpxBBox.minLat) / (gpxBBox.maxLat - gpxBBox.minLat || 1), 0, 1),
-}));
+    // Normaliser le chemin sur la bbox
+    normalizedPath = r500.map(p=>({
+      nx: clamp((p.lon-gpxBBox.minLon)/(gpxBBox.maxLon-gpxBBox.minLon||1),0,1),
+      ny: clamp((p.lat-gpxBBox.minLat)/(gpxBBox.maxLat-gpxBBox.minLat||1),0,1),
+    }));
 
     buildScene();
 
@@ -832,18 +1069,20 @@ normalizedPath = r500.map(p => ({
     $('orderBtn').disabled=false;
 
     badge.style.display='inline-block';
-    if(heightmapCache.mode==='real-mapbox'){
-    badge.textContent=`✓ Terrain Mapbox réel ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`;
+    if(heightmapCache.mode==='srtm-opentopodata'){
+      badge.textContent=`✓ SRTM GL3 réel · ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`;
       badge.className='real';
     } else {
-      badge.textContent='⚠ Fallback GPX (API indisponible)';
+      badge.textContent='⚠ Fallback IDW (API indisponible)';
       badge.className='fallback';
     }
 
   } catch(err){
-    alert(err.message||'Erreur.');
+    alert(err.message||'Erreur inattendue.');
     setStatus('Erreur : '+err.message);
-  } finally { this.disabled=false; }
+  } finally {
+    this.disabled=false;
+  }
 });
 
 $('stlBtn').addEventListener('click', exportSTL);
@@ -851,27 +1090,32 @@ $('stlBtn').addEventListener('click', exportSTL);
 $('orderBtn').addEventListener('click',()=>{
   if(!heightmapCache){ alert('Charge d\'abord un GPX.'); return; }
   const s=gpxStats(gpxPoints||[]);
-  alert([
-    '=== Résumé commande ===',
+  const summary=[
+    '╔══════════════════════════════╗',
+    '║    RÉSUMÉ COMMANDE RELIEF3D   ║',
+    '╚══════════════════════════════╝',
     '',
     `Fichier      : ${pendingName}`,
-    `Terrain      : ${heightmapCache.mode}`,
-    `Altitude     : ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`,
-    `Bbox         : ${gpxBBox.minLat.toFixed(4)}N ${gpxBBox.minLon.toFixed(4)}E`,
-    `               → ${gpxBBox.maxLat.toFixed(4)}N ${gpxBBox.maxLon.toFixed(4)}E`,
+    `Source élév. : ${heightmapCache.mode}`,
+    `Altitude     : ${heightmapCache.minEle.toFixed(0)} – ${heightmapCache.maxEle.toFixed(0)} m`,
+    `Bbox         : ${gpxBBox.minLat.toFixed(4)}°N  ${gpxBBox.minLon.toFixed(4)}°E`,
+    `               → ${gpxBBox.maxLat.toFixed(4)}°N  ${gpxBBox.maxLon.toFixed(4)}°E`,
     '',
     `Distance     : ${s.distKm.toFixed(1)} km`,
     `D+           : ${s.dPlus} m`,
-    `D−           : ${s.dMinus} m`,
+    `D-           : ${s.dMinus} m`,
     '',
-    `Élévation    : ${cfg.elevScale}×`,
-    `Base         : ${cfg.baseThick}`,
-    `Zoom / RotH / RotV : ${cfg.zoom}× / ${cfg.rotH}° / ${cfg.rotV}°`,
-    `Tracé        : W${cfg.traceW} H${cfg.traceH} ${cfg.traceColor}`,
+    `Taille       : ${currentSizeMm} × ${currentSizeMm} mm`,
+    `Élévation ×  : ${cfg.elevScale}`,
+    `Base         : ${cfg.baseThick} u`,
+    `Palette      : ${currentPalette}`,
+    `Tracé        : W${cfg.traceW.toFixed(3)}  H${cfg.traceH.toFixed(3)}  ${cfg.traceColor}`,
     '',
-    `Ligne 1      : "${cfg.txt1}"`,
-    `Ligne 2      : "${cfg.txt2}"`,
-  ].join('\n'));
+    `Plaque L1    : "${cfg.txt1}"`,
+    `Plaque L2    : "${cfg.txt2}"`,
+    `Plaque L3    : "${cfg.txt3}"`,
+  ].join('\n');
+  alert(summary);
 });
 
 window.addEventListener('resize',()=>{
