@@ -813,7 +813,7 @@ function buildScene(){
   //   row gy_p=0       → z = -SIZE/2 (nord, maxLat) → hm[GRID-1] (nord)
   //   row gy_p=GRID-1  → z = +SIZE/2 (sud, minLat)  → hm[0]      (sud)
   //   → on accède hm[GRID-1-gy_p][gx]
-  const geo = new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1);
+ /* const geo = new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1);
   geo.rotateX(-Math.PI/2);
   const pos = geo.attributes.position;
   const cols = [];
@@ -838,8 +838,18 @@ function buildScene(){
     new THREE.BoxGeometry(SIZE,.001,SIZE),
     new THREE.MeshStandardMaterial({color:0xd4cabc})
   );
-  bot.position.set(0,baseY-.0005,0);
-  terrainGroup.add(bot);
+  */
+  const solidGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
+
+const mat = new THREE.MeshStandardMaterial({
+  color: 0xd8d0c0,
+  roughness: 0.95,
+  metalness: 0.02
+});
+
+terrainGroup.add(new THREE.Mesh(solidGeo, mat));
+ // bot.position.set(0,baseY-.0005,0);
+  //terrainGroup.add(bot);
 
   scene.add(terrainGroup);
 
