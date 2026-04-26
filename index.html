@@ -549,15 +549,16 @@ async function loadHeightmap(bbox){
     `&outputFormat=AAIGrid` +
     `&API_Key=${OPENTOPO_API_KEY}`;
 
-  const resp = await fetch(url);
+console.log(url);
 
-  console.log(url);
- const resp = await fetch(url);
+const resp = await fetch(url);
 const text = await resp.text();
+
 console.log(text.slice(0, 500));
-  if(!resp.ok){
-    throw new Error(`OpenTopography HTTP ${resp.status}: ${await resp.text()}`);
-  }
+
+if(!resp.ok){
+  throw new Error(`OpenTopography HTTP ${resp.status}: ${text}`);
+}
 
   const text = await resp.text();
 
