@@ -1026,6 +1026,77 @@ function initThree(){
 // ══════════════════════════════════════════════════════════════
 //  EXPORT STL BINAIRE
 // ══════════════════════════════════════════════════════════════
+
+  function buildSolidTerrainGeometry(hm, elevH, baseY){
+  const verts = [];
+  const idx = [];
+
+  // Top vertices
+  for(let gy = 0; gy < GRID; gy++){
+    for(let gx = 0; gx < GRID; gx++){
+      const x = (gx / (GRID - 1) - 0.5) * SIZE;
+      const z = (0.5 - gy / (GRID - 1)) * SIZE;
+      const y = hm[gy][gx] * elevH;
+      verts.push(x, y, z);
+    }
+  }
+
+  const bottomOffset = GRID * GRID;
+
+  // Bottom vertices
+  for(let gy = 0; gy < GRID; gy++){
+    for(let gx = 0; gx < GRID; gx++){
+      const x = (gx / (GRID - 1) - 0.5) * SIZE;
+      const z = (0.5 - gy / (GRID - 1)) * SIZE;
+      verts.push(x, baseY, z);
+    }
+  }
+
+  // Top + bottom faces
+  for(let gy = 0; gy < GRID - 1; gy++){
+    for(let gx = 0; gx < GRID - 1; gx++){
+      const a = gy * GRID + gx;
+      const b = a + 1;
+      const c = a + GRID;
+      const d = c + 1;
+
+      // top
+      idx.push(a, c, b, b, c, d);
+
+      // bottom
+      const ab = bottomOffset + a;
+      const bb = bottomOffset + b;
+      const cb = bottomOffset + c;
+      const db = bottomOffset + d;
+
+      idx.push(ab, bb, cb, bb, db, cb);
+    }
+  }
+
+  function addSide(topA, topB){
+    const botA = bottomOffset + topA;
+    const botB = bottomOffset + topB;
+    idx.push(topA, botA, topB, topB, botA, botB);
+  }
+
+  // South/North
+  for(let gx = 0; gx < GRID - 1; gx++){
+    addSide(gx, gx + 1);
+    addSide((GRID - 1) * GRID + gx + 1, (GRID - 1) * GRID + gx);
+  }
+
+  // West/East
+  for(let gy = 0; gy < GRID - 1; gy++){
+    addSide((gy + 1) * GRID, gy * GRID);
+    addSide(gy * GRID + GRID - 1, (gy + 1) * GRID + GRID - 1);
+  }
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
 function exportSTL(){
   if(!heightmapCache){ alert('Charge d\'abord un fichier GPX.'); return; }
   setStatus('Génération STL en cours…');
@@ -1047,39 +1118,7 @@ function exportSTL(){
     geo.dispose();
   }
 
-  // Surface du terrain — même convention que buildScene
-  const tg=new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1); tg.rotateX(-Math.PI/2);
-  const tp=tg.attributes.position;
-  for(let gy_p=0;gy_p<GRID;gy_p++) for(let gx=0;gx<GRID;gx++){
-    const hmRow = GRID-1-gy_p; // gy_p=0=nord → hm[GRID-1]
-    tp.setY(gy_p*GRID+gx, hm[hmRow][gx]*elevH);
-  }
-  tp.needsUpdate=true; tg.computeVertexNormals(); collectGeo(tg);
-
-  // Face inférieure
-  const bg=new THREE.PlaneGeometry(SIZE,SIZE,1,1); bg.rotateX(Math.PI/2);
-  const bp=bg.attributes.position;
-  for(let i=0;i<bp.count;i++) bp.setY(i,baseY);
-  bp.needsUpdate=true; collectGeo(bg);
-
-  // Flancs — même convention que buildSide
-  for(const s of ['N','S','W','E']){
-    const pts=[];
-    if(s==='N') for(let gx=0;gx<GRID;gx++) pts.push({gx,gy:GRID-1});
-    if(s==='S') for(let gx=0;gx<GRID;gx++) pts.push({gx,gy:0});
-    if(s==='W') for(let gy=0;gy<GRID;gy++) pts.push({gx:0,     gy});
-    if(s==='E') for(let gy=0;gy<GRID;gy++) pts.push({gx:GRID-1,gy});
-    const verts=[],idx=[];
-    for(const p of pts){
-      const wx=(p.gx/(GRID-1)-.5)*SIZE, wz=(0.5-p.gy/(GRID-1))*SIZE;
-      const h=hm[p.gy][p.gx]*elevH;
-      verts.push(wx,h,wz, wx,baseY,wz);
-    }
-    for(let i=0;i<pts.length-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+2,a+1,a+3);}
-    const g=new THREE.BufferGeometry();
-    g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-    g.setIndex(idx); collectGeo(g);
-  }
+collectGeo(buildSolidTerrainGeometry(hm, elevH, baseY));
 
   // Tracé GPX — tube saucisson
 if(normalizedPath){
