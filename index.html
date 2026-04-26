@@ -875,11 +875,15 @@ function buildSide(s,hm,elevH,baseY,mat){
   return new THREE.Mesh(g,mat);
 }
 function createRaisedPathGeometry(elevH){
+  if(!normalizedPath || normalizedPath.length < 2){
+    return new THREE.BufferGeometry();
+  }
+
   const pts = normalizedPath.map(p => {
     const x = (p.nx - 0.5) * SIZE;
     const z = (0.5 - p.ny) * SIZE;
     const ground = sampleH(p.nx, p.ny) * elevH;
-    return { x, z, bottom: ground + 0.015, top: ground + cfg.traceH };
+    return { x, z, bottom: ground - 0.01, top: ground + cfg.traceH };
   });
 
   const step = Math.max(1, Math.floor(pts.length / 500));
@@ -942,6 +946,8 @@ function createRaisedPathGeometry(elevH){
 }
 function buildPath(elevH){
   if(pathObj){ clearObj(pathObj); scene.remove(pathObj); }
+
+  if(!normalizedPath || normalizedPath.length < 2) return;
 
   const pathGeo = createRaisedPathGeometry(elevH);
 
