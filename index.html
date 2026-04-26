@@ -320,10 +320,10 @@
       <div class="stitle"><span class="num">3</span>Palette terrain</div>
       <div class="clabel">Ambiance</div>
       <div class="pgrid" id="pgrid">
-        <div class="popt active" data-p="glacier" title="Glacier" style="background:linear-gradient(180deg,#dce8f0 0%,#7aaccc 50%,#3a6a85 100%)">Glacier</div>
-        <div class="popt" data-p="alpin" title="Alpin" style="background:linear-gradient(180deg,#f0ece0 0%,#a8b87a 50%,#4a6040 100%)">Alpin</div>
-        <div class="popt" data-p="sable" title="Sable" style="background:linear-gradient(180deg,#f5f0e8 0%,#d4b87a 50%,#8a6840 100%)">Sable</div>
-        <div class="popt" data-p="lave" title="Lave" style="background:linear-gradient(180deg,#f0f0f0 0%,#888888 50%,#282828 100%)">Lave</div>
+        <div class="popt active" data-p="glacier" title="Glacier" style="background:linear-gradient(180deg,#ffffff 0%,#7aaccc 50%,#3a6a85 100%)">Glacier</div>
+        <div class="popt" data-p="alpin" title="Alpin" style="background:linear-gradient(180deg,#f0ece0 0%,#bbbbbb 50%,#4a6040 100%)">Alpin</div>
+        <div class="popt" data-p="sable" title="Sable" style="background:linear-gradient(180deg,#f5f0e8 0%,#888888 50%,#8a6840 100%)">Sable</div>
+        <div class="popt" data-p="lave" title="Lave" style="background:linear-gradient(180deg,#f0f0f0 0%,#333333 50%,#282828 100%)">Lave</div>
         <div class="popt" data-p="neige" title="Neige" style="background:linear-gradient(180deg,#ffffff 0%,#d8e8f0 50%,#9ab8cc 100%)">Neige</div>
       </div>
     </div>
@@ -450,6 +450,7 @@ let cfg = {
   elevScale: 4.0, baseThick: 0.5, margin: 0.20,
   zoom: 1.0, rotH: -30, rotV: 38,
   traceW: 0.07, traceH: 0.09, traceColor: '#d45000',
+  terrainColor: '#e8e4dc',
   txt1: 'Patrouille des Glaciers', txt2: '57.5 km · 4380 m D+', txt3: '',
 };
 
@@ -843,7 +844,7 @@ function buildScene(){
   const solidGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
 
 const mat = new THREE.MeshStandardMaterial({
-  color: 0xe8e4dc,
+  color: new THREE.Color(cfg.terrainColor),
   roughness: 1.0,
   metalness: 0.0,
   flatShading: true
@@ -1053,7 +1054,7 @@ function initThree(){
 const y = hNorm * elevH;
 verts.push(x, y, z);
 
-const c = heightColor(hNorm);
+//const c = heightColor(hNorm);
 //cols.push(c.r, c.g, c.b);
     }
   }
@@ -1274,10 +1275,23 @@ $('cgrid').querySelectorAll('.copt').forEach(el=>el.addEventListener('click',()=
 }));
 
 // Palette terrain
+// Couleur terrain uniforme
 $('pgrid').querySelectorAll('.popt').forEach(el=>el.addEventListener('click',()=>{
   $('pgrid').querySelectorAll('.popt').forEach(e=>e.classList.remove('active'));
   el.classList.add('active');
-  currentPalette=el.dataset.p;
+
+  currentPalette = el.dataset.p;
+
+  const terrainColors = {
+    glacier: '#f2f2f2', // blanc cassé
+    alpin:   '#b8b8b8', // gris clair
+    sable:   '#8c8c8c', // gris moyen
+    lave:    '#2f2f2f', // noir/gris foncé
+    neige:   '#ffffff'  // blanc
+  };
+
+  cfg.terrainColor = terrainColors[currentPalette] || '#e8e4dc';
+
   if(heightmapCache) buildScene();
 }));
 
