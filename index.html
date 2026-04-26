@@ -528,109 +528,212 @@ function smoothGrid(g, passes=2){
   return cur;
 }
 
+const OPENTOPO_API_KEY = "889e4a1067a0652b4010aa80dbf7e18d";
+const DEM_TYPE = "COP30"; // meilleur choix montagne, sinon "SRTMGL1"
 // ══════════════════════════════════════════════════════════════
 //  OPENTOPODATA — Terrain réel SRTM GL3
 //  API : https://api.opentopodata.org/v1/srtm30m
 //  Gratuit · 500 pts/req · 5 req/s · CORS OK
 // ══════════════════════════════════════════════════════════════
 async function loadHeightmap(bbox){
-  const N = 32; // grille 32×32 = 1024 pts → 3 batchs de ~340
-  setStatus('Génération grille d\'altitude SRTM…');
-  setProgress(5, 'Préparation des coordonnées…');
+  setStatus('Chargement OpenTopography DEM…');
+  setProgress(10, 'Requête OpenTopography…');
 
-  // gy=0 → minLat (sud), gy=N-1 → maxLat (nord)
-  // En Three.js PlaneGeometry rotateX(-PI/2) : z positif = sud, z négatif = nord
-  // donc row gy=0 = bas de la heightmap = z=+SIZE/2
-  const lats = [], lons = [];
-  for(let gy = 0; gy < N; gy++){
-    for(let gx = 0; gx < N; gx++){
-      lats.push(bbox.minLat + (bbox.maxLat - bbox.minLat) * gy / (N-1));
-      lons.push(bbox.minLon + (bbox.maxLon - bbox.minLon) * gx / (N-1));
-    }
+  const url =
+    `https://portal.opentopography.org/API/globaldem` +
+    `?demtype=${DEM_TYPE}` +
+    `&south=${bbox.minLat}` +
+    `&north=${bbox.maxLat}` +
+    `&west=${bbox.minLon}` +
+    `&east=${bbox.maxLon}` +
+    `&outputFormat=AAIGrid` +
+    `&API_Key=${OPENTOPO_API_KEY}`;
+
+  const resp = await fetch(url);
+
+  if(!resp.ok){
+    throw new Error(`OpenTopography HTTP ${resp.status}: ${await resp.text()}`);
   }
-  // On stocke : heights[gy][gx] avec gy=0=minLat=sud=Z+ Three.js
 
-  const BATCH = 100; // 100 pts/requête (safe)
-  const elevations = new Array(N*N).fill(0);
-  const totalBatches = Math.ceil((N*N) / BATCH);
+  const text = await resp.text();
 
-  for(let b = 0; b < totalBatches; b++){
-    const start = b * BATCH;
-    const end   = Math.min(start + BATCH, N*N);
-    const locs  = [];
-    for(let i = start; i < end; i++){
-      locs.push(`${lats[i].toFixed(6)},${lons[i].toFixed(6)}`);
-    }
+  if(text.trim().startsWith('<')){
+    throw new Error('OpenTopography a retourné du HTML : API key invalide, limite atteinte ou bbox trop grande.');
+  }
 
-    setProgress(10 + (b / totalBatches) * 75, `Batch ${b+1}/${totalBatches} — OpenTopography SRTM GL3…`);
-    setStatus(`Chargement altitude… lot ${b+1}/${totalBatches}`);
+  setProgress(45, 'Parsing AAIGrid…');
 
-    try {
-      const url = `https://api.opentopodata.org/v1/srtm30m?locations=${locs.join('|')}`;
-      const resp = await fetch(url);
-      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const json = await resp.json();
-      if(json.status !== 'OK') throw new Error(json.error || 'API error');
+  const aai = parseAAIGrid(text);
 
-      for(let i = 0; i < json.results.length; i++){
-        elevations[start + i] = json.results[i].elevation ?? 0;
+  setProgress(70, 'Interpolation 256×256…');
+
+  const heightsRaw = resampleAAIGridToGrid(aai, bbox, GRID);
+
+  let minE = Infinity;
+  let maxE = -Infinity;
+
+  for(const row of heightsRaw){
+    for(const v of row){
+      if(Number.isFinite(v)){
+        minE = Math.min(minE, v);
+        maxE = Math.max(maxE, v);
       }
-    } catch(err) {
-      console.warn(`Batch ${b+1} failed:`, err.message);
-      // Fallback: interpolate from GPX
-      for(let i = start; i < end; i++) elevations[i] = null;
-    }
-
-    // Rate limit: 5 req/s
-    if(b < totalBatches - 1) await new Promise(r => setTimeout(r, 250));
-  }
-
-  // Reshape en grille N×N
-  const rawGrid = [];
-  for(let gy = 0; gy < N; gy++){
-    rawGrid[gy] = [];
-    for(let gx = 0; gx < N; gx++){
-      rawGrid[gy][gx] = elevations[gy*N + gx] ?? 0;
     }
   }
 
-  setProgress(90, 'Interpolation GRID×GRID…');
-
-  // Upscale N×N → GRID×GRID par interpolation bilinéaire
-  const heights = [];
-  for(let gy = 0; gy < GRID; gy++){
-    heights[gy] = [];
-    for(let gx = 0; gx < GRID; gx++){
-      const fx = gx / (GRID-1) * (N-1);
-      const fy = gy / (GRID-1) * (N-1);
-      const x0 = Math.floor(fx), x1 = Math.min(N-1, x0+1);
-      const y0 = Math.floor(fy), y1 = Math.min(N-1, y0+1);
-      const tx = fx - x0, ty = fy - y0;
-      heights[gy][gx] = lerp(
-        lerp(rawGrid[y0][x0], rawGrid[y0][x1], tx),
-        lerp(rawGrid[y1][x0], rawGrid[y1][x1], tx),
-        ty
-      );
-    }
-  }
-
-  // Lissage léger
-  const smoothed = smoothGrid(heights, 2);
-
-  let minE = Infinity, maxE = -Infinity;
-  for(const row of smoothed) for(const v of row){
-    if(v < minE) minE = v;
-    if(v > maxE) maxE = v;
-  }
   const range = maxE - minE || 1;
-  const normalized = smoothed.map(row => row.map(v => (v - minE) / range));
 
-  setProgress(100, '✓ Terrain SRTM chargé');
-  setStatus(`✓ SRTM GL3 · ${minE.toFixed(0)}–${maxE.toFixed(0)} m`);
+  const normalized = heightsRaw.map(row =>
+    row.map(v => clamp((v - minE) / range, 0, 1))
+  );
 
-  return { heights: normalized, minEle: minE, maxEle: maxE, eleRange: range, mode: 'srtm-opentopodata' };
+  const smoothed = smoothGrid(normalized, 1);
+
+  setProgress(100, '✓ Terrain OpenTopography chargé');
+  setStatus(`✓ ${DEM_TYPE} OpenTopography · ${minE.toFixed(0)}–${maxE.toFixed(0)} m`);
+
+  return {
+    heights: smoothed,
+    minEle: minE,
+    maxEle: maxE,
+    eleRange: range,
+    mode: `opentopography-${DEM_TYPE.toLowerCase()}`
+  };
 }
 
+  function parseAAIGrid(text){
+  const lines = text.trim().split(/\r?\n/);
+
+  const header = {};
+  let dataStart = 0;
+
+  for(let i = 0; i < lines.length; i++){
+    const line = lines[i].trim();
+    const parts = line.split(/\s+/);
+    const key = parts[0].toLowerCase();
+
+    if([
+      'ncols',
+      'nrows',
+      'xllcorner',
+      'yllcorner',
+      'xllcenter',
+      'yllcenter',
+      'cellsize',
+      'nodata_value'
+    ].includes(key)){
+      header[key] = Number(parts[1]);
+      dataStart = i + 1;
+    } else {
+      break;
+    }
+  }
+
+  const ncols = header.ncols;
+  const nrows = header.nrows;
+  const cellsize = header.cellsize;
+  const noData = header.nodata_value ?? -9999;
+
+  const xll = header.xllcorner ?? header.xllcenter;
+  const yll = header.yllcorner ?? header.yllcenter;
+
+  if(!ncols || !nrows || !cellsize || !Number.isFinite(xll) || !Number.isFinite(yll)){
+    throw new Error('AAIGrid invalide : header incomplet.');
+  }
+
+  const values = lines
+    .slice(dataStart)
+    .join(' ')
+    .trim()
+    .split(/\s+/)
+    .map(Number);
+
+  if(values.length < ncols * nrows){
+    throw new Error(`AAIGrid incomplet : ${values.length} valeurs pour ${ncols*nrows} attendues.`);
+  }
+
+  const grid = [];
+
+  for(let row = 0; row < nrows; row++){
+    grid[row] = [];
+    for(let col = 0; col < ncols; col++){
+      const v = values[row * ncols + col];
+      grid[row][col] = v === noData ? NaN : v;
+    }
+  }
+
+  return {
+    ncols,
+    nrows,
+    cellsize,
+    noData,
+    xll,
+    yll,
+    grid
+  };
+}
+
+  function resampleAAIGridToGrid(aai, bbox, targetSize){
+  const out = [];
+
+  const west = aai.xll;
+  const south = aai.yll;
+  const east = west + aai.cellsize * (aai.ncols - 1);
+  const north = south + aai.cellsize * (aai.nrows - 1);
+
+  for(let gy = 0; gy < targetSize; gy++){
+    out[gy] = [];
+
+    const lat = bbox.minLat + (bbox.maxLat - bbox.minLat) * gy / (targetSize - 1);
+
+    for(let gx = 0; gx < targetSize; gx++){
+      const lon = bbox.minLon + (bbox.maxLon - bbox.minLon) * gx / (targetSize - 1);
+
+      const fx = (lon - west) / (east - west) * (aai.ncols - 1);
+
+      // AAIGrid : première ligne = nord
+      const fyFromSouth = (lat - south) / (north - south) * (aai.nrows - 1);
+      const fy = (aai.nrows - 1) - fyFromSouth;
+
+      out[gy][gx] = sampleAAIGridBilinear(aai, fx, fy);
+    }
+  }
+
+  return out;
+}
+  function sampleAAIGridBilinear(aai, fx, fy){
+  fx = clamp(fx, 0, aai.ncols - 1);
+  fy = clamp(fy, 0, aai.nrows - 1);
+
+  const x0 = Math.floor(fx);
+  const y0 = Math.floor(fy);
+  const x1 = Math.min(aai.ncols - 1, x0 + 1);
+  const y1 = Math.min(aai.nrows - 1, y0 + 1);
+
+  const tx = fx - x0;
+  const ty = fy - y0;
+
+  const v00 = aai.grid[y0][x0];
+  const v10 = aai.grid[y0][x1];
+  const v01 = aai.grid[y1][x0];
+  const v11 = aai.grid[y1][x1];
+
+  const vals = [v00, v10, v01, v11].filter(Number.isFinite);
+
+  if(vals.length === 0) return 0;
+
+  // fallback propre si un des coins est NoData
+  const safe00 = Number.isFinite(v00) ? v00 : vals[0];
+  const safe10 = Number.isFinite(v10) ? v10 : vals[0];
+  const safe01 = Number.isFinite(v01) ? v01 : vals[0];
+  const safe11 = Number.isFinite(v11) ? v11 : vals[0];
+
+  return lerp(
+    lerp(safe00, safe10, tx),
+    lerp(safe01, safe11, tx),
+    ty
+  );
+}
 // ── Fallback IDW ──────────────────────────────────────────────
 function buildFallbackHeightmap(pts, bbox){
   const norm=pts.map(p=>({
@@ -1078,7 +1181,7 @@ $('loadBtn').addEventListener('click', async function(){
     $('orderBtn').disabled=false;
 
     badge.style.display='inline-block';
-    if(heightmapCache.mode==='srtm-opentopodata'){
+    if(heightmapCache.mode.startsWith('opentopography-')){
       badge.textContent=`✓ SRTM GL3 réel · ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`;
       badge.className='real';
     } else {
