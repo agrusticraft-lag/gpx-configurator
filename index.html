@@ -1071,15 +1071,15 @@ function initThree(){
       const d = c + 1;
 
       // top
-      idx.push(a, c, b, b, c, d);
+idx.push(a, b, c, b, d, c);
 
-      // bottom
-      const ab = bottomOffset + a;
-      const bb = bottomOffset + b;
-      const cb = bottomOffset + c;
-      const db = bottomOffset + d;
+// bottom
+const ab = bottomOffset + a;
+const bb = bottomOffset + b;
+const cb = bottomOffset + c;
+const db = bottomOffset + d;
 
-      idx.push(ab, bb, cb, bb, db, cb);
+idx.push(ab, cb, bb, bb, cb, db);
     }
   }
 
@@ -1105,7 +1105,10 @@ function initThree(){
   g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
-  return g;
+ g.computeVertexNormals();
+g.normalizeNormals();
+g.computeBoundingSphere();
+return g;
 }
   function downloadSTLFromTriangles(tris, filename){
   const scale = currentSizeMm / SIZE;
