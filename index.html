@@ -376,7 +376,7 @@
     <!-- 7 · Export -->
     <div class="section">
       <div class="stitle"><span class="num">7</span>Export &amp; Commande</div>
-      <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger STL</button>
+     <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger Terrain + GPX</button>
       <button class="btn btn-green" id="orderBtn" disabled>Commander →</button>
       <div class="note" style="margin-top:8px">
         STL prêt à slicer — terrain + socle + tracé. Recommandé : 0.15 mm, 20% infill, PLA mat.
@@ -1097,72 +1097,120 @@ function initThree(){
   g.computeVertexNormals();
   return g;
 }
-function exportSTL(){
-  if(!heightmapCache){ alert('Charge d\'abord un fichier GPX.'); return; }
-  setStatus('Génération STL en cours…');
+  function downloadSTLFromTriangles(tris, filename){
+  const scale = currentSizeMm / SIZE;
 
-  const scale  = currentSizeMm / SIZE;
-  const elevH  = 1.8*(cfg.elevScale/4);
-  const baseY  = -cfg.baseThick;
-  const hm     = heightmapCache.heights;
-  const tris   = [];
+  const buf = new ArrayBuffer(80 + 4 + tris.length * 50);
+  const dv = new DataView(buf);
 
-  function collectGeo(geo){
-    const pos=geo.attributes.position, ix=geo.index;
-    const mk=i=>new THREE.Vector3(pos.getX(i),pos.getY(i),pos.getZ(i));
-    if(ix){
-      for(let i=0;i<ix.count;i+=3) tris.push([mk(ix.getX(i)),mk(ix.getX(i+1)),mk(ix.getX(i+2))]);
-    } else {
-      for(let i=0;i<pos.count;i+=3) tris.push([mk(i),mk(i+1),mk(i+2)]);
-    }
-    geo.dispose();
+  const hdr = `Relief3D — ${filename}`;
+  for(let i = 0; i < 80; i++){
+    dv.setUint8(i, i < hdr.length ? hdr.charCodeAt(i) : 0);
   }
- 
-collectGeo(buildSolidTerrainGeometry(hm, elevH, baseY));
 
-  // Tracé GPX — tube saucisson
-/*if(normalizedPath){
-  collectGeo(createRaisedPathGeometry(elevH));
-}*/
-  
- /* if(normalizedPath){
-    const allPts = normalizedPath.map(p => new THREE.Vector3(
-      (p.nx - 0.5) * SIZE,
-      sampleH(p.nx, p.ny) * elevH + cfg.traceH * 0.5,
-      (0.5 - p.ny) * SIZE
-    ));
-    const step2 = Math.max(1, Math.floor(allPts.length / 300));
-    const red = [];
-    for(let i=0;i<allPts.length;i+=step2) red.push(allPts[i]);
-    if(red[red.length-1]!==allPts[allPts.length-1]) red.push(allPts[allPts.length-1]);
-    const curve   = new THREE.CatmullRomCurve3(red, false, 'catmullrom', 0.5);
-    const segs    = Math.min(red.length * 4, 1200);
-    const tubeGeo = new THREE.TubeGeometry(curve, segs, cfg.traceW/2, 8, false);
-    collectGeo(tubeGeo);
-  }*/
+  dv.setUint32(80, tris.length, true);
 
-  // ─ Encode STL binaire ─
-  const buf=new ArrayBuffer(80+4+tris.length*50);
-  const dv=new DataView(buf);
-  const hdr=`Relief3D — ${cfg.txt1} — relief3d.studio`;
-  for(let i=0;i<80;i++) dv.setUint8(i,i<hdr.length?hdr.charCodeAt(i):0);
-  dv.setUint32(80,tris.length,true);
-  let off=84;
-  const nv=new THREE.Vector3();
-  for(const[a,b,c] of tris){
-    nv.crossVectors(new THREE.Vector3().subVectors(b,a),new THREE.Vector3().subVectors(c,a)).normalize();
-    for(const v of [nv,a,b,c]){
-      dv.setFloat32(off,v.x*scale,true);off+=4;
-      dv.setFloat32(off,v.y*scale,true);off+=4;
-      dv.setFloat32(off,v.z*scale,true);off+=4;
+  let off = 84;
+  const nv = new THREE.Vector3();
+
+  for(const [a, b, c] of tris){
+    nv.crossVectors(
+      new THREE.Vector3().subVectors(b, a),
+      new THREE.Vector3().subVectors(c, a)
+    ).normalize();
+
+    for(const v of [nv, a, b, c]){
+      dv.setFloat32(off, v.x * scale, true); off += 4;
+      dv.setFloat32(off, v.y * scale, true); off += 4;
+      dv.setFloat32(off, v.z * scale, true); off += 4;
     }
-    dv.setUint16(off,0,true);off+=2;
+
+    dv.setUint16(off, 0, true);
+    off += 2;
   }
-  const blob=new Blob([buf],{type:'application/octet-stream'});
-  const url=URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'),{href:url,download:`terrain-${cfg.txt1.replace(/\s+/g,'-').toLowerCase()}-${currentSizeMm}mm.stl`}).click();
+
+  const blob = new Blob([buf], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+
   URL.revokeObjectURL(url);
-  setStatus(`✓ STL exporté — ${tris.length} triangles · ${currentSizeMm}×${currentSizeMm} mm`);
+}
+  function collectTrianglesFromGeometry(geo){
+  const tris = [];
+  const pos = geo.attributes.position;
+  const ix = geo.index;
+
+  const mk = i => new THREE.Vector3(
+    pos.getX(i),
+    pos.getY(i),
+    pos.getZ(i)
+  );
+
+  if(ix){
+    for(let i = 0; i < ix.count; i += 3){
+      tris.push([
+        mk(ix.getX(i)),
+        mk(ix.getX(i + 1)),
+        mk(ix.getX(i + 2))
+      ]);
+    }
+  } else {
+    for(let i = 0; i < pos.count; i += 3){
+      tris.push([
+        mk(i),
+        mk(i + 1),
+        mk(i + 2)
+      ]);
+    }
+  }
+
+  geo.dispose();
+  return tris;
+}
+function exportSTL(){
+  if(!heightmapCache){
+    alert('Charge d\'abord un fichier GPX.');
+    return;
+  }
+
+  setStatus('Génération des STL terrain + GPX…');
+
+  const elevH = 1.8 * (cfg.elevScale / 4);
+  const baseY = -cfg.baseThick;
+  const hm = heightmapCache.heights;
+
+  const safeName = cfg.txt1
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]/g, '')
+    .toLowerCase();
+
+  // 1. STL terrain seul
+  const terrainGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
+  const terrainTris = collectTrianglesFromGeometry(terrainGeo);
+
+  downloadSTLFromTriangles(
+    terrainTris,
+    `terrain-${safeName}-${currentSizeMm}mm.stl`
+  );
+
+  // 2. STL tracé GPX seul
+  if(normalizedPath && normalizedPath.length > 1){
+    const traceGeo = createRaisedPathGeometry(elevH);
+    const traceTris = collectTrianglesFromGeometry(traceGeo);
+
+    setTimeout(() => {
+      downloadSTLFromTriangles(
+        traceTris,
+        `trace-gpx-${safeName}-${currentSizeMm}mm.stl`
+      );
+    }, 300);
+  }
+
+  setStatus('✓ STL terrain + tracé GPX exportés séparément');
 }
 
 // ══════════════════════════════════════════════════════════════
