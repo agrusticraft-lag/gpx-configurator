@@ -843,10 +843,10 @@ function buildScene(){
   const solidGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
 
 const mat = new THREE.MeshStandardMaterial({
-  vertexColors: true,
-  roughness: 0.95,
-  metalness: 0.02,
-  side: THREE.DoubleSide
+  color: 0xe8e4dc,
+  roughness: 1.0,
+  metalness: 0.0,
+  flatShading: true
 });
 
 terrainGroup.add(new THREE.Mesh(solidGeo, mat));
@@ -1041,7 +1041,7 @@ function initThree(){
 
   function buildSolidTerrainGeometry(hm, elevH, baseY){
   const verts = [];
- const cols = [];
+
   const idx = [];
 
   // Top vertices
@@ -1111,7 +1111,7 @@ idx.push(ab, cb, bb, bb, cb, db);
 
   const g = new THREE.BufferGeometry();
 g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+
 g.setIndex(idx);
   g.computeVertexNormals();
  g.computeVertexNormals();
