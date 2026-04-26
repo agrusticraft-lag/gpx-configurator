@@ -243,6 +243,8 @@
       body{overflow:auto}
     }
   </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -272,7 +274,7 @@
       </div>
       <input type="file" id="gpxinput" accept=".gpx" style="display:none">
       <div class="finfo" id="finfo"></div>
-      <canvas id="map2d" width="300" height="300" style="width:100%;height:300px;background:#e9e6df;border:1px solid rgba(0,0,0,.12);border-radius:4px;margin-top:8px;display:none;"></canvas>
+     <div id="map2d" style="width:100%;height:300px;border:1px solid rgba(0,0,0,.12);border-radius:4px;margin-top:8px;display:none;"></div>
       <div id="progWrap">
         <div id="progBar"><div id="progFill"></div></div>
         <div id="progLbl">Chargement…</div>
@@ -396,7 +398,10 @@
 
 const GRID    = 256;
 const SIZE    = 6.0;
-  
+
+  let map2d = null;
+let gpxPolyline2d = null;
+let bboxRect2d = null;
 let previewBBox = null;
 let gpxPoints      = null;
 let gpxBBox        = null;
@@ -468,36 +473,7 @@ function setProgress(pct, lbl){
   if(pct >= 100) setTimeout(()=>{ $('progWrap').style.display='none'; }, 1800);
 }
 
-  function draw2DPreview(){
-  if(!gpxPoints) return;
-
-  const canvas = $('map2d');
-  const ctx = canvas.getContext('2d');
-
-  canvas.style.display = 'block';
-
-  const W = canvas.width;
-  const H = canvas.height;
-
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle = '#e9e6df';
-  ctx.fillRect(0,0,W,H);
-
-  const lats = gpxPoints.map(p => p.lat);
-  const lons = gpxPoints.map(p => p.lon);
-
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLon = Math.min(...lons);
-  const maxLon = Math.max(...lons);
-
-  const margin = 20;
-
-  function project(lat, lon){
-    const x = margin + (lon - minLon) / (maxLon - minLon || 1) * (W - 2 * margin);
-    const y = H - margin - (lat - minLat) / (maxLat - minLat || 1) * (H - 2 * margin);
-    return {x, y};
-  }
+draw2DPreview
 
   // tracé GPX
   ctx.beginPath();
