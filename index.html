@@ -874,41 +874,85 @@ function buildSide(s,hm,elevH,baseY,mat){
   g.setIndex(idx); g.computeVertexNormals();
   return new THREE.Mesh(g,mat);
 }
+function createRaisedPathGeometry(elevH){
+  const pts = normalizedPath.map(p => {
+    const x = (p.nx - 0.5) * SIZE;
+    const z = (0.5 - p.ny) * SIZE;
+    const ground = sampleH(p.nx, p.ny) * elevH;
+    return { x, z, bottom: ground + 0.015, top: ground + cfg.traceH };
+  });
 
+  const step = Math.max(1, Math.floor(pts.length / 500));
+  const reduced = pts.filter((_, i) => i % step === 0);
+  if(reduced[reduced.length - 1] !== pts[pts.length - 1]) reduced.push(pts[pts.length - 1]);
+
+  const verts = [];
+  const idx = [];
+  const halfW = cfg.traceW / 2;
+
+  for(let i = 0; i < reduced.length; i++){
+    const p = reduced[i];
+    const prev = reduced[Math.max(0, i - 1)];
+    const next = reduced[Math.min(reduced.length - 1, i + 1)];
+
+    const dx = next.x - prev.x;
+    const dz = next.z - prev.z;
+    const len = Math.hypot(dx, dz) || 1;
+
+    const nx = -dz / len;
+    const nz = dx / len;
+
+    verts.push(
+      p.x + nx * halfW, p.bottom, p.z + nz * halfW, // 0 left bottom
+      p.x - nx * halfW, p.bottom, p.z - nz * halfW, // 1 right bottom
+      p.x + nx * halfW, p.top,    p.z + nz * halfW, // 2 left top
+      p.x - nx * halfW, p.top,    p.z - nz * halfW  // 3 right top
+    );
+  }
+
+  for(let i = 0; i < reduced.length - 1; i++){
+    const a = i * 4;
+    const b = (i + 1) * 4;
+
+    // dessus
+    idx.push(a+2, b+2, a+3, a+3, b+2, b+3);
+
+    // côté gauche
+    idx.push(a+0, a+2, b+0, b+0, a+2, b+2);
+
+    // côté droit
+    idx.push(a+1, b+1, a+3, a+3, b+1, b+3);
+
+    // dessous
+    idx.push(a+0, b+0, a+1, a+1, b+0, b+1);
+  }
+
+  // bouchons début / fin
+  idx.push(0, 1, 2, 2, 1, 3);
+
+  const n = reduced.length;
+  const e = (n - 1) * 4;
+  idx.push(e+0, e+2, e+1, e+1, e+2, e+3);
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
 function buildPath(elevH){
-  // 1. Construire les points 3D du tracé sur le terrain
-  const allPts = normalizedPath.map(p => new THREE.Vector3(
-    (p.nx - 0.5) * SIZE,
-    sampleH(p.nx, p.ny) * elevH + cfg.traceH * 0.5, // centré verticalement
-    (0.5 - p.ny) * SIZE
-  ));
-
-  // 2. Réduire à ~300 pts pour la courbe (trop de pts = lent)
-  const step = Math.max(1, Math.floor(allPts.length / 300));
-  const reduced = [];
-  for(let i = 0; i < allPts.length; i += step) reduced.push(allPts[i]);
-  if(reduced[reduced.length-1] !== allPts[allPts.length-1])
-    reduced.push(allPts[allPts.length-1]);
-
-  // 3. Lisser avec CatmullRom → tube régulier garanti
-  const curve = new THREE.CatmullRomCurve3(reduced, false, 'catmullrom', 0.5);
-
-  // 4. TubeGeometry = vrai saucisson circulaire, sections Frenet
-  const segments  = Math.min(reduced.length * 4, 1200); // nb de sections longitudinales
-  const radialSeg = 8;   // côtés du tube (8 = octogone, joli et léger)
-  const radius    = cfg.traceW / 2;
-
-  const tubeGeo = new THREE.TubeGeometry(curve, segments, radius, radialSeg, false);
-
   if(pathObj){ clearObj(pathObj); scene.remove(pathObj); }
-  pathObj = new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({
+
+  const pathGeo = createRaisedPathGeometry(elevH);
+
+  pathObj = new THREE.Mesh(pathGeo, new THREE.MeshStandardMaterial({
     color: new THREE.Color(cfg.traceColor),
-    roughness: .40,
-    metalness: .08,
+    roughness: .45,
+    metalness: .04,
   }));
+
   scene.add(pathObj);
 }
-
 function updateCamera(){
   const rH=cfg.rotH*Math.PI/180, rV=cfg.rotV*Math.PI/180, dist=11/cfg.zoom;
   camera.position.set(
