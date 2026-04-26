@@ -551,10 +551,10 @@ async function loadHeightmap(bbox){
 
   const resp = await fetch(url);
 
-  console.log(url);
- const resp = await fetch(url);
-const text = await resp.text();
-console.log(text.slice(0, 500));
+
+
+
+
   if(!resp.ok){
     throw new Error(`OpenTopography HTTP ${resp.status}: ${await resp.text()}`);
   }
@@ -875,13 +875,6 @@ function buildSide(s,hm,elevH,baseY,mat){
   return new THREE.Mesh(g,mat);
 }
 
-
-
-
-
-
-
-
 function buildPath(elevH){
   // 1. Construire les points 3D du tracé sur le terrain
   const allPts = normalizedPath.map(p => new THREE.Vector3(
@@ -907,50 +900,12 @@ function buildPath(elevH){
 
   const tubeGeo = new THREE.TubeGeometry(curve, segments, radius, radialSeg, false);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   if(pathObj){ clearObj(pathObj); scene.remove(pathObj); }
   pathObj = new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({
-
-
-
     color: new THREE.Color(cfg.traceColor),
     roughness: .40,
     metalness: .08,
   }));
-
   scene.add(pathObj);
 }
 
