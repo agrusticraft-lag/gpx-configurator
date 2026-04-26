@@ -272,6 +272,7 @@
       </div>
       <input type="file" id="gpxinput" accept=".gpx" style="display:none">
       <div class="finfo" id="finfo"></div>
+      <canvas id="map2d" width="300" height="300" style="width:100%;height:300px;background:#e9e6df;border:1px solid rgba(0,0,0,.12);border-radius:4px;margin-top:8px;display:none;"></canvas>
       <div id="progWrap">
         <div id="progBar"><div id="progFill"></div></div>
         <div id="progLbl">Chargement…</div>
@@ -395,7 +396,8 @@
 
 const GRID    = 256;
 const SIZE    = 6.0;
-
+  
+let previewBBox = null;
 let gpxPoints      = null;
 let gpxBBox        = null;
 let heightmapCache = null;
@@ -466,6 +468,70 @@ function setProgress(pct, lbl){
   if(pct >= 100) setTimeout(()=>{ $('progWrap').style.display='none'; }, 1800);
 }
 
+  function draw2DPreview(){
+  if(!gpxPoints) return;
+
+  const canvas = $('map2d');
+  const ctx = canvas.getContext('2d');
+
+  canvas.style.display = 'block';
+
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#e9e6df';
+  ctx.fillRect(0,0,W,H);
+
+  const lats = gpxPoints.map(p => p.lat);
+  const lons = gpxPoints.map(p => p.lon);
+
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+
+  const margin = 20;
+
+  function project(lat, lon){
+    const x = margin + (lon - minLon) / (maxLon - minLon || 1) * (W - 2 * margin);
+    const y = H - margin - (lat - minLat) / (maxLat - minLat || 1) * (H - 2 * margin);
+    return {x, y};
+  }
+
+  // tracé GPX
+  ctx.beginPath();
+  gpxPoints.forEach((p, i) => {
+    const pt = project(p.lat, p.lon);
+    if(i === 0) ctx.moveTo(pt.x, pt.y);
+    else ctx.lineTo(pt.x, pt.y);
+  });
+
+  ctx.strokeStyle = cfg.traceColor;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // bbox utilisée pour génération
+  previewBBox = computeBBox(resample(gpxPoints, 500), cfg.margin);
+
+  const p1 = project(previewBBox.minLat, previewBBox.minLon);
+  const p2 = project(previewBBox.maxLat, previewBBox.maxLon);
+
+  const x = Math.min(p1.x, p2.x);
+  const y = Math.min(p1.y, p2.y);
+  const w = Math.abs(p2.x - p1.x);
+  const h = Math.abs(p2.y - p1.y);
+
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6,4]);
+  ctx.strokeRect(x, y, w, h);
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#111';
+  ctx.font = '11px monospace';
+  ctx.fillText('Zone terrain générée', x + 6, y + 16);
+}
 function latLonDist(a,b,c,d){
   const R=6371000, r=x=>x*Math.PI/180;
   const dLa=r(c-a), dLo=r(d-b);
@@ -1262,7 +1328,19 @@ bindRebuild('elev',   'elevScale', v=>v.toFixed(1));
 bindRebuild('base',   'baseThick', v=>v.toFixed(2));
 bindRebuild('traceW', 'traceW',    v=>v.toFixed(3));
 bindRebuild('traceH', 'traceH',    v=>v.toFixed(3));
-bindCam('zoom', 'zoom', v=>v.toFixed(2)+'×');
+const zoomEl = $('zoom');
+const zoomVal = $('zoomVal');
+
+zoomEl.addEventListener('input', () => {
+  cfg.zoom = parseFloat(zoomEl.value);
+
+  // zoom élevé = moins de marge autour du GPX
+  cfg.margin = 0.45 / cfg.zoom;
+
+  zoomVal.textContent = cfg.zoom.toFixed(2) + '×';
+
+  if(gpxPoints) draw2DPreview();
+});
 bindCam('rotH', 'rotH', v=>v+'°');
 bindCam('rotV', 'rotV', v=>v+'°');
 
@@ -1309,6 +1387,7 @@ $('sizeGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('cli
 
 // ── GPX Upload ────────────────────────────────────────────────
 function handleGPXFile(file){
+  $('loadBtn').disabled = true;
   if(!file) return;
   pendingName = file.name;
   $('finfo').style.display='block';
@@ -1317,7 +1396,19 @@ function handleGPXFile(file){
   setStatus('GPX prêt → cliquer "Charger le terrain"');
 
   const reader=new FileReader();
-  reader.onload=ev=>{ pendingGPX=ev.target.result; };
+ reader.onload = ev => {
+  pendingGPX = ev.target.result;
+
+  const pts = parseGPX(pendingGPX);
+  if(pts.length > 2){
+    gpxPoints = pts;
+    draw2DPreview();
+  }
+
+  $('loadBtn').disabled = false;
+  setStatus('GPX prêt → ajuste le cadrage puis génère le terrain');
+};
+  
   reader.onerror=()=>setStatus('Erreur lecture fichier GPX');
   reader.readAsText(file);
 }
@@ -1346,7 +1437,7 @@ $('loadBtn').addEventListener('click', async function(){
     gpxPoints=pts;
 
     const r500=resample(pts,500);
-    gpxBBox=computeBBox(r500, cfg.margin);
+  gpxBBox = previewBBox || computeBBox(r500, cfg.margin);
 
     const stats=gpxStats(pts);
     cfg.txt2=`${stats.distKm.toFixed(1)} km · ${stats.dPlus} m D+`;
