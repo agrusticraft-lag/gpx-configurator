@@ -497,19 +497,29 @@ function resample(pts, n){
   if(pts.length<=n) return [...pts];
   const step=(pts.length-1)/(n-1);
   return Array.from({length:n}, (_,i)=>pts[Math.round(i*step)]);
-}
-
-function computeBBox(pts, m){
+}function computeBBox(pts, m){
   const lats=pts.map(p=>p.lat), lons=pts.map(p=>p.lon);
-  let[mnLa,mxLa]=[Math.min(...lats),Math.max(...lats)];
-  let[mnLo,mxLo]=[Math.min(...lons),Math.max(...lons)];
-  const dLa=Math.max(1e-6,mxLa-mnLa), dLo=Math.max(1e-6,mxLo-mnLo);
-  // Ensure square bbox
-  const dMax = Math.max(dLa, dLo);
-  const midLa = (mnLa+mxLa)/2, midLo = (mnLo+mxLo)/2;
+  let minLat=Math.min(...lats), maxLat=Math.max(...lats);
+  let minLon=Math.min(...lons), maxLon=Math.max(...lons);
+
+  const midLat = (minLat + maxLat) / 2;
+  const cosLat = Math.cos(midLat * Math.PI / 180);
+
+  let dLat = maxLat - minLat;
+  let dLon = (maxLon - minLon) * cosLat;
+
+  const dMax = Math.max(dLat, dLon) * (1 + 2*m);
+
+  const halfLat = dMax / 2;
+  const halfLon = dMax / (2 * cosLat);
+
+  const midLon = (minLon + maxLon) / 2;
+
   return {
-    minLat: midLa - dMax*(0.5+m), maxLat: midLa + dMax*(0.5+m),
-    minLon: midLo - dMax*(0.5+m), maxLon: midLo + dMax*(0.5+m),
+    minLat: midLat - halfLat,
+    maxLat: midLat + halfLat,
+    minLon: midLon - halfLon,
+    maxLon: midLon + halfLon,
   };
 }
 
@@ -534,74 +544,97 @@ function smoothGrid(g, passes=2){
 //  Gratuit · 500 pts/req · 5 req/s · CORS OK
 // ══════════════════════════════════════════════════════════════
 async function loadHeightmap(bbox){
-  const N = 32; // grille 32×32 = 1024 pts → 3 batchs de ~340
-  setStatus('Génération grille d\'altitude SRTM…');
-  setProgress(5, 'Préparation des coordonnées…');
+  const N = 64; // plus précis que 32
+  const BATCH = 100;
 
-  const lats = [], lons = [];
+  setStatus('Chargement des vraies altitudes…');
+  setProgress(5, 'Préparation grille altitude…');
+
+  const coords = [];
+
   for(let gy = 0; gy < N; gy++){
     for(let gx = 0; gx < N; gx++){
-      lats.push(bbox.minLat + (bbox.maxLat - bbox.minLat) * gy / (N-1));
-      lons.push(bbox.minLon + (bbox.maxLon - bbox.minLon) * gx / (N-1));
+      coords.push({
+        lat: bbox.maxLat - (bbox.maxLat - bbox.minLat) * gy / (N - 1),
+        lon: bbox.minLon + (bbox.maxLon - bbox.minLon) * gx / (N - 1)
+      });
     }
   }
 
-  const BATCH = 100; // 100 pts/requête (safe)
-  const elevations = new Array(N*N).fill(0);
-  const totalBatches = Math.ceil((N*N) / BATCH);
+  const elevations = [];
 
-  for(let b = 0; b < totalBatches; b++){
-    const start = b * BATCH;
-    const end   = Math.min(start + BATCH, N*N);
-    const locs  = [];
-    for(let i = start; i < end; i++){
-      locs.push(`${lats[i].toFixed(6)},${lons[i].toFixed(6)}`);
+  for(let start = 0; start < coords.length; start += BATCH){
+    const batch = coords.slice(start, start + BATCH);
+    const batchIndex = Math.floor(start / BATCH) + 1;
+    const totalBatches = Math.ceil(coords.length / BATCH);
+
+    setProgress(
+      10 + (batchIndex / totalBatches) * 75,
+      `Altitudes réelles ${batchIndex}/${totalBatches}…`
+    );
+
+    const locations = batch
+      .map(p => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`)
+      .join('|');
+
+   // const url = `https://api.opentopodata.org/v1/srtm30m?locations=${locations}`;
+
+    const url = 'https://portal.opentopography.org/API/globaldem?' + new URLSearchParams({
+  demtype: 'COP30',
+  south: bbox.minLat,
+  north: bbox.maxLat,
+  west: bbox.minLon,
+  east: bbox.maxLon,
+  outputFormat: 'AAIGrid',
+  API_Key: 'TA_CLE_API'
+}).toString();
+    const resp = await fetch(url);
+
+    if(!resp.ok){
+      throw new Error(`OpenTopoData HTTP ${resp.status}`);
     }
 
-    setProgress(10 + (b / totalBatches) * 75, `Batch ${b+1}/${totalBatches} — OpenTopography SRTM GL3…`);
-    setStatus(`Chargement altitude… lot ${b+1}/${totalBatches}`);
+    const json = await resp.json();
 
-    try {
-      const url = `https://api.opentopodata.org/v1/srtm30m?locations=${locs.join('|')}`;
-      const resp = await fetch(url);
-      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const json = await resp.json();
-      if(json.status !== 'OK') throw new Error(json.error || 'API error');
-
-      for(let i = 0; i < json.results.length; i++){
-        elevations[start + i] = json.results[i].elevation ?? 0;
-      }
-    } catch(err) {
-      console.warn(`Batch ${b+1} failed:`, err.message);
-      // Fallback: interpolate from GPX
-      for(let i = start; i < end; i++) elevations[i] = null;
+    if(json.status !== 'OK'){
+      throw new Error(json.error || 'Erreur OpenTopoData');
     }
 
-    // Rate limit: 5 req/s
-    if(b < totalBatches - 1) await new Promise(r => setTimeout(r, 250));
+    json.results.forEach(r => {
+      elevations.push(r.elevation ?? 0);
+    });
+
+    await new Promise(r => setTimeout(r, 1100));
   }
 
-  // Reshape en grille N×N
   const rawGrid = [];
+
   for(let gy = 0; gy < N; gy++){
     rawGrid[gy] = [];
     for(let gx = 0; gx < N; gx++){
-      rawGrid[gy][gx] = elevations[gy*N + gx] ?? 0;
+      rawGrid[gy][gx] = elevations[gy * N + gx];
     }
   }
 
-  setProgress(90, 'Interpolation GRID×GRID…');
+  setProgress(90, 'Interpolation haute résolution…');
 
-  // Upscale N×N → GRID×GRID par interpolation bilinéaire
   const heights = [];
+
   for(let gy = 0; gy < GRID; gy++){
     heights[gy] = [];
+
     for(let gx = 0; gx < GRID; gx++){
-      const fx = gx / (GRID-1) * (N-1);
-      const fy = gy / (GRID-1) * (N-1);
-      const x0 = Math.floor(fx), x1 = Math.min(N-1, x0+1);
-      const y0 = Math.floor(fy), y1 = Math.min(N-1, y0+1);
-      const tx = fx - x0, ty = fy - y0;
+      const fx = gx / (GRID - 1) * (N - 1);
+      const fy = gy / (GRID - 1) * (N - 1);
+
+      const x0 = Math.floor(fx);
+      const y0 = Math.floor(fy);
+      const x1 = Math.min(N - 1, x0 + 1);
+      const y1 = Math.min(N - 1, y0 + 1);
+
+      const tx = fx - x0;
+      const ty = fy - y0;
+
       heights[gy][gx] = lerp(
         lerp(rawGrid[y0][x0], rawGrid[y0][x1], tx),
         lerp(rawGrid[y1][x0], rawGrid[y1][x1], tx),
@@ -610,21 +643,32 @@ async function loadHeightmap(bbox){
     }
   }
 
-  // Lissage léger
-  const smoothed = smoothGrid(heights, 2);
+  let minE = Infinity;
+  let maxE = -Infinity;
 
-  let minE = Infinity, maxE = -Infinity;
-  for(const row of smoothed) for(const v of row){
-    if(v < minE) minE = v;
-    if(v > maxE) maxE = v;
+  for(const row of heights){
+    for(const v of row){
+      if(v < minE) minE = v;
+      if(v > maxE) maxE = v;
+    }
   }
+
   const range = maxE - minE || 1;
-  const normalized = smoothed.map(row => row.map(v => (v - minE) / range));
 
-  setProgress(100, '✓ Terrain SRTM chargé');
-  setStatus(`✓ SRTM GL3 · ${minE.toFixed(0)}–${maxE.toFixed(0)} m`);
+  const normalized = heights.map(row =>
+    row.map(v => (v - minE) / range)
+  );
 
-  return { heights: normalized, minEle: minE, maxEle: maxE, eleRange: range, mode: 'srtm-opentopodata' };
+  setProgress(100, 'Terrain réel chargé');
+  setStatus(`✓ Terrain réel · ${minE.toFixed(0)}–${maxE.toFixed(0)} m`);
+
+  return {
+    heights: normalized,
+    minEle: minE,
+    maxEle: maxE,
+    eleRange: range,
+    mode: 'srtm-opentopodata'
+  };
 }
 
 // ── Fallback IDW ──────────────────────────────────────────────
