@@ -497,29 +497,19 @@ function resample(pts, n){
   if(pts.length<=n) return [...pts];
   const step=(pts.length-1)/(n-1);
   return Array.from({length:n}, (_,i)=>pts[Math.round(i*step)]);
-}function computeBBox(pts, m){
+}
+
+function computeBBox(pts, m){
   const lats=pts.map(p=>p.lat), lons=pts.map(p=>p.lon);
-  let minLat=Math.min(...lats), maxLat=Math.max(...lats);
-  let minLon=Math.min(...lons), maxLon=Math.max(...lons);
-
-  const midLat = (minLat + maxLat) / 2;
-  const cosLat = Math.cos(midLat * Math.PI / 180);
-
-  let dLat = maxLat - minLat;
-  let dLon = (maxLon - minLon) * cosLat;
-
-  const dMax = Math.max(dLat, dLon) * (1 + 2*m);
-
-  const halfLat = dMax / 2;
-  const halfLon = dMax / (2 * cosLat);
-
-  const midLon = (minLon + maxLon) / 2;
-
+  let[mnLa,mxLa]=[Math.min(...lats),Math.max(...lats)];
+  let[mnLo,mxLo]=[Math.min(...lons),Math.max(...lons)];
+  const dLa=Math.max(1e-6,mxLa-mnLa), dLo=Math.max(1e-6,mxLo-mnLo);
+  // Ensure square bbox
+  const dMax = Math.max(dLa, dLo);
+  const midLa = (mnLa+mxLa)/2, midLo = (mnLo+mxLo)/2;
   return {
-    minLat: midLat - halfLat,
-    maxLat: midLat + halfLat,
-    minLon: midLon - halfLon,
-    maxLon: midLon + halfLon,
+    minLat: midLa - dMax*(0.5+m), maxLat: midLa + dMax*(0.5+m),
+    minLon: midLo - dMax*(0.5+m), maxLon: midLo + dMax*(0.5+m),
   };
 }
 
@@ -544,97 +534,78 @@ function smoothGrid(g, passes=2){
 //  Gratuit · 500 pts/req · 5 req/s · CORS OK
 // ══════════════════════════════════════════════════════════════
 async function loadHeightmap(bbox){
-  const N = 64; // plus précis que 32
-  const BATCH = 100;
+  const N = 32; // grille 32×32 = 1024 pts → 3 batchs de ~340
+  setStatus('Génération grille d\'altitude SRTM…');
+  setProgress(5, 'Préparation des coordonnées…');
 
-  setStatus('Chargement des vraies altitudes…');
-  setProgress(5, 'Préparation grille altitude…');
-
-  const coords = [];
-
+  // gy=0 → minLat (sud), gy=N-1 → maxLat (nord)
+  // En Three.js PlaneGeometry rotateX(-PI/2) : z positif = sud, z négatif = nord
+  // donc row gy=0 = bas de la heightmap = z=+SIZE/2
+  const lats = [], lons = [];
   for(let gy = 0; gy < N; gy++){
     for(let gx = 0; gx < N; gx++){
-      coords.push({
-        lat: bbox.maxLat - (bbox.maxLat - bbox.minLat) * gy / (N - 1),
-        lon: bbox.minLon + (bbox.maxLon - bbox.minLon) * gx / (N - 1)
-      });
+      lats.push(bbox.minLat + (bbox.maxLat - bbox.minLat) * gy / (N-1));
+      lons.push(bbox.minLon + (bbox.maxLon - bbox.minLon) * gx / (N-1));
     }
   }
+  // On stocke : heights[gy][gx] avec gy=0=minLat=sud=Z+ Three.js
 
-  const elevations = [];
+  const BATCH = 100; // 100 pts/requête (safe)
+  const elevations = new Array(N*N).fill(0);
+  const totalBatches = Math.ceil((N*N) / BATCH);
 
-  for(let start = 0; start < coords.length; start += BATCH){
-    const batch = coords.slice(start, start + BATCH);
-    const batchIndex = Math.floor(start / BATCH) + 1;
-    const totalBatches = Math.ceil(coords.length / BATCH);
-
-    setProgress(
-      10 + (batchIndex / totalBatches) * 75,
-      `Altitudes réelles ${batchIndex}/${totalBatches}…`
-    );
-
-    const locations = batch
-      .map(p => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`)
-      .join('|');
-
-   // const url = `https://api.opentopodata.org/v1/srtm30m?locations=${locations}`;
-
-    const url = 'https://portal.opentopography.org/API/globaldem?' + new URLSearchParams({
-  demtype: 'COP30',
-  south: bbox.minLat,
-  north: bbox.maxLat,
-  west: bbox.minLon,
-  east: bbox.maxLon,
-  outputFormat: 'AAIGrid',
-  API_Key: 'TA_CLE_API'
-}).toString();
-    const resp = await fetch(url);
-
-    if(!resp.ok){
-      throw new Error(`OpenTopoData HTTP ${resp.status}`);
+  for(let b = 0; b < totalBatches; b++){
+    const start = b * BATCH;
+    const end   = Math.min(start + BATCH, N*N);
+    const locs  = [];
+    for(let i = start; i < end; i++){
+      locs.push(`${lats[i].toFixed(6)},${lons[i].toFixed(6)}`);
     }
 
-    const json = await resp.json();
+    setProgress(10 + (b / totalBatches) * 75, `Batch ${b+1}/${totalBatches} — OpenTopography SRTM GL3…`);
+    setStatus(`Chargement altitude… lot ${b+1}/${totalBatches}`);
 
-    if(json.status !== 'OK'){
-      throw new Error(json.error || 'Erreur OpenTopoData');
+    try {
+      const url = `https://api.opentopodata.org/v1/srtm30m?locations=${locs.join('|')}`;
+      const resp = await fetch(url);
+      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      if(json.status !== 'OK') throw new Error(json.error || 'API error');
+
+      for(let i = 0; i < json.results.length; i++){
+        elevations[start + i] = json.results[i].elevation ?? 0;
+      }
+    } catch(err) {
+      console.warn(`Batch ${b+1} failed:`, err.message);
+      // Fallback: interpolate from GPX
+      for(let i = start; i < end; i++) elevations[i] = null;
     }
 
-    json.results.forEach(r => {
-      elevations.push(r.elevation ?? 0);
-    });
-
-    await new Promise(r => setTimeout(r, 1100));
+    // Rate limit: 5 req/s
+    if(b < totalBatches - 1) await new Promise(r => setTimeout(r, 250));
   }
 
+  // Reshape en grille N×N
   const rawGrid = [];
-
   for(let gy = 0; gy < N; gy++){
     rawGrid[gy] = [];
     for(let gx = 0; gx < N; gx++){
-      rawGrid[gy][gx] = elevations[gy * N + gx];
+      rawGrid[gy][gx] = elevations[gy*N + gx] ?? 0;
     }
   }
 
-  setProgress(90, 'Interpolation haute résolution…');
+  setProgress(90, 'Interpolation GRID×GRID…');
 
+  // Upscale N×N → GRID×GRID par interpolation bilinéaire
   const heights = [];
-
   for(let gy = 0; gy < GRID; gy++){
     heights[gy] = [];
-
     for(let gx = 0; gx < GRID; gx++){
-      const fx = gx / (GRID - 1) * (N - 1);
-      const fy = gy / (GRID - 1) * (N - 1);
-
-      const x0 = Math.floor(fx);
-      const y0 = Math.floor(fy);
-      const x1 = Math.min(N - 1, x0 + 1);
-      const y1 = Math.min(N - 1, y0 + 1);
-
-      const tx = fx - x0;
-      const ty = fy - y0;
-
+      const fx = gx / (GRID-1) * (N-1);
+      const fy = gy / (GRID-1) * (N-1);
+      const x0 = Math.floor(fx), x1 = Math.min(N-1, x0+1);
+      const y0 = Math.floor(fy), y1 = Math.min(N-1, y0+1);
+      const tx = fx - x0, ty = fy - y0;
       heights[gy][gx] = lerp(
         lerp(rawGrid[y0][x0], rawGrid[y0][x1], tx),
         lerp(rawGrid[y1][x0], rawGrid[y1][x1], tx),
@@ -643,32 +614,21 @@ async function loadHeightmap(bbox){
     }
   }
 
-  let minE = Infinity;
-  let maxE = -Infinity;
+  // Lissage léger
+  const smoothed = smoothGrid(heights, 2);
 
-  for(const row of heights){
-    for(const v of row){
-      if(v < minE) minE = v;
-      if(v > maxE) maxE = v;
-    }
+  let minE = Infinity, maxE = -Infinity;
+  for(const row of smoothed) for(const v of row){
+    if(v < minE) minE = v;
+    if(v > maxE) maxE = v;
   }
-
   const range = maxE - minE || 1;
+  const normalized = smoothed.map(row => row.map(v => (v - minE) / range));
 
-  const normalized = heights.map(row =>
-    row.map(v => (v - minE) / range)
-  );
+  setProgress(100, '✓ Terrain SRTM chargé');
+  setStatus(`✓ SRTM GL3 · ${minE.toFixed(0)}–${maxE.toFixed(0)} m`);
 
-  setProgress(100, 'Terrain réel chargé');
-  setStatus(`✓ Terrain réel · ${minE.toFixed(0)}–${maxE.toFixed(0)} m`);
-
-  return {
-    heights: normalized,
-    minEle: minE,
-    maxEle: maxE,
-    eleRange: range,
-    mode: 'srtm-opentopodata'
-  };
+  return { heights: normalized, minEle: minE, maxEle: maxE, eleRange: range, mode: 'srtm-opentopodata' };
 }
 
 // ── Fallback IDW ──────────────────────────────────────────────
@@ -694,15 +654,20 @@ function buildFallbackHeightmap(pts, bbox){
 }
 
 // ── Lecture heightmap ─────────────────────────────────────────
+// nx : 0=minLon (ouest)→1=maxLon (est)
+// ny : 0=minLat (sud)  →1=maxLat (nord)
+// heights[gy][gx] : gy=0=sud=minLat, gy=GRID-1=nord=maxLat
+// Three.js PlaneGeometry rotateX(-PI/2) : z=+SIZE/2=sud, z=-SIZE/2=nord
+// Donc dans buildScene : vertex (gx,gy) → z = (0.5 - ny)*SIZE où ny = gy/(GRID-1)
 function sampleH(nx, ny){
   if(!heightmapCache?.heights) return 0;
-  const x = clamp(nx,0,1) * (GRID-1);
-  const y = (1 - clamp(ny,0,1)) * (GRID-1);
-  const x0=Math.floor(x), x1=Math.min(GRID-1,x0+1);
-  const y0=Math.floor(y), y1=Math.min(GRID-1,y0+1);
+  const gxf = clamp(nx,0,1) * (GRID-1);
+  const gyf = clamp(ny,0,1) * (GRID-1);
+  const x0=Math.floor(gxf), x1=Math.min(GRID-1,x0+1);
+  const y0=Math.floor(gyf), y1=Math.min(GRID-1,y0+1);
   const r0=heightmapCache.heights[y0], r1=heightmapCache.heights[y1];
   if(!r0||!r1) return 0;
-  return lerp(lerp(r0[x0],r0[x1],x-x0), lerp(r1[x0],r1[x1],x-x0), y-y0);
+  return lerp(lerp(r0[x0],r0[x1],gxf-x0), lerp(r1[x0],r1[x1],gxf-x0), gyf-y0);
 }
 
 // ── Couleur palette ───────────────────────────────────────────
@@ -741,13 +706,18 @@ function buildScene(){
   terrainGroup = new THREE.Group();
 
   // ─ Surface ─
+  // PlaneGeometry (GRID×GRID) rotateX(-PI/2) :
+  //   row gy_p=0       → z = -SIZE/2 (nord, maxLat) → hm[GRID-1] (nord)
+  //   row gy_p=GRID-1  → z = +SIZE/2 (sud, minLat)  → hm[0]      (sud)
+  //   → on accède hm[GRID-1-gy_p][gx]
   const geo = new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1);
   geo.rotateX(-Math.PI/2);
   const pos = geo.attributes.position;
   const cols = [];
-  for(let gy=0;gy<GRID;gy++) for(let gx=0;gx<GRID;gx++){
-    const h = hm[gy][gx];
-    pos.setY(gy*GRID+gx, h*elevH);
+  for(let gy_p=0;gy_p<GRID;gy_p++) for(let gx=0;gx<GRID;gx++){
+    const hmRow = GRID-1-gy_p; // gy_p=0=nord → hmRow=GRID-1=maxLat ✓
+    const h = hm[hmRow][gx];
+    pos.setY(gy_p*GRID+gx, h*elevH);
     const c = heightColor(h); cols.push(c.r,c.g,c.b);
   }
   geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
@@ -776,18 +746,22 @@ function buildScene(){
 }
 
 function buildSide(s,hm,elevH,baseY,mat){
-  const top=[];
-  if(s==='N') for(let x=0;x<GRID;x++) top.push({x,y:0});
-  if(s==='S') for(let x=0;x<GRID;x++) top.push({x,y:GRID-1});
-  if(s==='W') for(let y=0;y<GRID;y++) top.push({x:0,y});
-  if(s==='E') for(let y=0;y<GRID;y++) top.push({x:GRID-1,y});
+  // hm[gy][gx] : gy=0=minLat=sud (z=+SIZE/2), gy=GRID-1=maxLat=nord (z=-SIZE/2)
+  // nx=gx/(GRID-1), worldX = (nx-0.5)*SIZE
+  // worldZ = (0.5 - gy/(GRID-1))*SIZE  (gy=0→z=+SIZE/2=sud, gy=GRID-1→z=-SIZE/2=nord)
+  const pts=[]; // {gx, gy}
+  if(s==='N') for(let gx=0;gx<GRID;gx++) pts.push({gx, gy:GRID-1}); // nord = maxLat
+  if(s==='S') for(let gx=0;gx<GRID;gx++) pts.push({gx, gy:0});       // sud  = minLat
+  if(s==='W') for(let gy=0;gy<GRID;gy++) pts.push({gx:0,      gy});
+  if(s==='E') for(let gy=0;gy<GRID;gy++) pts.push({gx:GRID-1, gy});
   const verts=[],idx=[];
-  for(const p of top){
-    const nx=p.x/(GRID-1), ny=1-p.y/(GRID-1);
-    const h=hm[p.y][p.x]*elevH;
-    verts.push((nx-.5)*SIZE,h,(.5-ny)*SIZE, (nx-.5)*SIZE,baseY,(.5-ny)*SIZE);
+  for(const p of pts){
+    const wx = (p.gx/(GRID-1) - 0.5) * SIZE;
+    const wz = (0.5 - p.gy/(GRID-1)) * SIZE;
+    const h  = hm[p.gy][p.gx] * elevH;
+    verts.push(wx,h,wz, wx,baseY,wz);
   }
-  for(let i=0;i<top.length-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+2,a+1,a+3);}
+  for(let i=0;i<pts.length-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+2,a+1,a+3);}
   const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
   g.setIndex(idx); g.computeVertexNormals();
@@ -795,35 +769,35 @@ function buildSide(s,hm,elevH,baseY,mat){
 }
 
 function buildPath(elevH){
-  const pts=normalizedPath.map(p=>new THREE.Vector3(
-    (p.nx-.5)*SIZE, sampleH(p.nx,p.ny)*elevH, (.5-p.ny)*SIZE
+  // 1. Construire les points 3D du tracé sur le terrain
+  const allPts = normalizedPath.map(p => new THREE.Vector3(
+    (p.nx - 0.5) * SIZE,
+    sampleH(p.nx, p.ny) * elevH + cfg.traceH * 0.5, // centré verticalement
+    (0.5 - p.ny) * SIZE
   ));
-  const step=Math.max(1,Math.floor(pts.length/280));
-  const red=[];
-  for(let i=0;i<pts.length;i+=step) red.push(pts[i]);
-  if(red[red.length-1]!==pts[pts.length-1]) red.push(pts[pts.length-1]);
 
-  const verts=[],idx=[];
-  for(let i=0;i<red.length;i++){
-    const p=red[i], prev=red[Math.max(0,i-1)], next=red[Math.min(red.length-1,i+1)];
-    const dir=new THREE.Vector3().subVectors(next,prev); dir.y=0;
-    if(dir.lengthSq()<1e-8) dir.set(1,0,0); dir.normalize();
-    const n=new THREE.Vector3(-dir.z,0,dir.x), hw=cfg.traceW/2;
-    const lb=p.clone().addScaledVector(n,hw), rb=p.clone().addScaledVector(n,-hw);
-    const lt=lb.clone(), rt=rb.clone(); lt.y+=cfg.traceH; rt.y+=cfg.traceH;
-    verts.push(lb.x,lb.y,lb.z,rb.x,rb.y,rb.z,lt.x,lt.y,lt.z,rt.x,rt.y,rt.z);
-  }
-  for(let i=0;i<red.length-1;i++){
-    const a=i*4,b=a+4;
-    idx.push(a+2,a+3,b+2,b+2,a+3,b+3, a,a+2,b,b,a+2,b+2, a+3,a+1,b+3,b+3,a+1,b+1);
-  }
-  idx.push(0,1,2,2,1,3);
-  const nm=(red.length-1)*4; idx.push(nm+2,nm+1,nm,nm+3,nm+1,nm+2);
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-  g.setIndex(idx); g.computeVertexNormals();
-  pathObj=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
-    color:new THREE.Color(cfg.traceColor),roughness:.45,metalness:.05
+  // 2. Réduire à ~300 pts pour la courbe (trop de pts = lent)
+  const step = Math.max(1, Math.floor(allPts.length / 300));
+  const reduced = [];
+  for(let i = 0; i < allPts.length; i += step) reduced.push(allPts[i]);
+  if(reduced[reduced.length-1] !== allPts[allPts.length-1])
+    reduced.push(allPts[allPts.length-1]);
+
+  // 3. Lisser avec CatmullRom → tube régulier garanti
+  const curve = new THREE.CatmullRomCurve3(reduced, false, 'catmullrom', 0.5);
+
+  // 4. TubeGeometry = vrai saucisson circulaire, sections Frenet
+  const segments  = Math.min(reduced.length * 4, 1200); // nb de sections longitudinales
+  const radialSeg = 8;   // côtés du tube (8 = octogone, joli et léger)
+  const radius    = cfg.traceW / 2;
+
+  const tubeGeo = new THREE.TubeGeometry(curve, segments, radius, radialSeg, false);
+
+  if(pathObj){ clearObj(pathObj); scene.remove(pathObj); }
+  pathObj = new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({
+    color: new THREE.Color(cfg.traceColor),
+    roughness: .40,
+    metalness: .08,
   }));
   scene.add(pathObj);
 }
@@ -903,11 +877,13 @@ function exportSTL(){
     geo.dispose();
   }
 
-  // Surface du terrain
+  // Surface du terrain — même convention que buildScene
   const tg=new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1); tg.rotateX(-Math.PI/2);
   const tp=tg.attributes.position;
-  for(let gy=0;gy<GRID;gy++) for(let gx=0;gx<GRID;gx++)
-    tp.setY(gy*GRID+gx, hm[gy][gx]*elevH);
+  for(let gy_p=0;gy_p<GRID;gy_p++) for(let gx=0;gx<GRID;gx++){
+    const hmRow = GRID-1-gy_p; // gy_p=0=nord → hm[GRID-1]
+    tp.setY(gy_p*GRID+gx, hm[hmRow][gx]*elevH);
+  }
   tp.needsUpdate=true; tg.computeVertexNormals(); collectGeo(tg);
 
   // Face inférieure
@@ -916,51 +892,40 @@ function exportSTL(){
   for(let i=0;i<bp.count;i++) bp.setY(i,baseY);
   bp.needsUpdate=true; collectGeo(bg);
 
-  // Flancs
+  // Flancs — même convention que buildSide
   for(const s of ['N','S','W','E']){
-    const top=[];
-    if(s==='N') for(let x=0;x<GRID;x++) top.push({x,y:0});
-    if(s==='S') for(let x=0;x<GRID;x++) top.push({x,y:GRID-1});
-    if(s==='W') for(let y=0;y<GRID;y++) top.push({x:0,y});
-    if(s==='E') for(let y=0;y<GRID;y++) top.push({x:GRID-1,y});
+    const pts=[];
+    if(s==='N') for(let gx=0;gx<GRID;gx++) pts.push({gx,gy:GRID-1});
+    if(s==='S') for(let gx=0;gx<GRID;gx++) pts.push({gx,gy:0});
+    if(s==='W') for(let gy=0;gy<GRID;gy++) pts.push({gx:0,     gy});
+    if(s==='E') for(let gy=0;gy<GRID;gy++) pts.push({gx:GRID-1,gy});
     const verts=[],idx=[];
-    for(const p of top){
-      const nx=p.x/(GRID-1),ny=1-p.y/(GRID-1);
-      verts.push((nx-.5)*SIZE,hm[p.y][p.x]*elevH,(.5-ny)*SIZE, (nx-.5)*SIZE,baseY,(.5-ny)*SIZE);
+    for(const p of pts){
+      const wx=(p.gx/(GRID-1)-.5)*SIZE, wz=(0.5-p.gy/(GRID-1))*SIZE;
+      const h=hm[p.gy][p.gx]*elevH;
+      verts.push(wx,h,wz, wx,baseY,wz);
     }
-    for(let i=0;i<top.length-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+2,a+1,a+3);}
+    for(let i=0;i<pts.length-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+2,a+1,a+3);}
     const g=new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
     g.setIndex(idx); collectGeo(g);
   }
 
-  // Tracé GPX
+  // Tracé GPX — tube saucisson
   if(normalizedPath){
-    const pts=normalizedPath.map(p=>new THREE.Vector3(
-      (p.nx-.5)*SIZE, sampleH(p.nx,p.ny)*elevH, (.5-p.ny)*SIZE
+    const allPts = normalizedPath.map(p => new THREE.Vector3(
+      (p.nx - 0.5) * SIZE,
+      sampleH(p.nx, p.ny) * elevH + cfg.traceH * 0.5,
+      (0.5 - p.ny) * SIZE
     ));
-    const step=Math.max(1,Math.floor(pts.length/350));
-    const red=[];
-    for(let i=0;i<pts.length;i+=step) red.push(pts[i]);
-    if(red[red.length-1]!==pts[pts.length-1]) red.push(pts[pts.length-1]);
-    const verts=[],idx=[];
-    for(let i=0;i<red.length;i++){
-      const p=red[i],prev=red[Math.max(0,i-1)],next=red[Math.min(red.length-1,i+1)];
-      const dir=new THREE.Vector3().subVectors(next,prev); dir.y=0;
-      if(dir.lengthSq()<1e-8) dir.set(1,0,0); dir.normalize();
-      const n=new THREE.Vector3(-dir.z,0,dir.x),hw=cfg.traceW/2;
-      const lb=p.clone().addScaledVector(n,hw),rb=p.clone().addScaledVector(n,-hw);
-      const lt=lb.clone(),rt=rb.clone(); lt.y+=cfg.traceH; rt.y+=cfg.traceH;
-      verts.push(lb.x,lb.y,lb.z,rb.x,rb.y,rb.z,lt.x,lt.y,lt.z,rt.x,rt.y,rt.z);
-    }
-    for(let i=0;i<red.length-1;i++){const a=i*4,b=a+4;
-      idx.push(a+2,a+3,b+2,b+2,a+3,b+3,a,a+2,b,b,a+2,b+2,a+3,a+1,b+3,b+3,a+1,b+1);
-    }
-    idx.push(0,1,2,2,1,3);
-    const nm=(red.length-1)*4; idx.push(nm+2,nm+1,nm,nm+3,nm+1,nm+2);
-    const pg=new THREE.BufferGeometry();
-    pg.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-    pg.setIndex(idx); collectGeo(pg);
+    const step2 = Math.max(1, Math.floor(allPts.length / 300));
+    const red = [];
+    for(let i=0;i<allPts.length;i+=step2) red.push(allPts[i]);
+    if(red[red.length-1]!==allPts[allPts.length-1]) red.push(allPts[allPts.length-1]);
+    const curve   = new THREE.CatmullRomCurve3(red, false, 'catmullrom', 0.5);
+    const segs    = Math.min(red.length * 4, 1200);
+    const tubeGeo = new THREE.TubeGeometry(curve, segs, cfg.traceW/2, 8, false);
+    collectGeo(tubeGeo);
   }
 
   // ─ Encode STL binaire ─
