@@ -724,8 +724,8 @@ if(!resp.ok){
   const v11 = aai.grid[y1][x1];
 
   const vals = [v00, v10, v01, v11].filter(Number.isFinite);
-
-  if(vals.length === 0) return 0;
+    
+if(vals.length === 0) return NaN;
 
   // fallback propre si un des coins est NoData
   const safe00 = Number.isFinite(v00) ? v00 : vals[0];
