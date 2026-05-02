@@ -930,56 +930,29 @@ function buildSide(s,hm,elevH,baseY,mat){
     return new THREE.BufferGeometry();
   }
 
-  // Chemin GPX "posé" sur le relief :
-  // - on calcule les bords gauche/droite du chemin,
-  // - on échantillonne le relief sous chaque bord,
-  // - le dessus est toujours au-dessus du point le plus haut sous la largeur du chemin.
-  // Ça évite que la montagne traverse visuellement le tracé dans les pentes fortes.
-  const minDist = cfg.traceW * 0.35;
-  const raw = normalizedPath.map(p => ({
-    x: (p.nx - 0.5) * SIZE,
-    z: (0.5 - p.ny) * SIZE,
-    nx: p.nx,
-    ny: p.ny
-  }));
+  const pts = normalizedPath.map(p => {
+    const x = (p.nx - 0.5) * SIZE;
+    const z = (0.5 - p.ny) * SIZE;
+    const ground = sampleH(p.nx, p.ny) * elevH;
 
-  const reduced = [];
-  for(const p of raw){
-    const last = reduced[reduced.length - 1];
-    if(!last || Math.hypot(p.x - last.x, p.z - last.z) >= minDist){
-      reduced.push({...p});
-    }
-  }
-  if(reduced.length < 2){
-    reduced.push(raw[raw.length - 1]);
-  } else {
-    const lastRaw = raw[raw.length - 1];
-    const last = reduced[reduced.length - 1];
-    if(Math.hypot(lastRaw.x - last.x, lastRaw.z - last.z) > minDist * 0.5){
-      reduced.push({...lastRaw});
-    }
-  }
+    return {
+      x,
+      z,
+      bottom: ground - 0.01,
+      top: ground + cfg.traceH
+    };
+  });
 
-  // Lissage très léger XY pour éviter les micro-zigzags du GPX sans déformer le tracé.
-  for(let pass = 0; pass < 2; pass++){
-    for(let i = 1; i < reduced.length - 1; i++){
-      reduced[i].x = reduced[i-1].x * 0.25 + reduced[i].x * 0.50 + reduced[i+1].x * 0.25;
-      reduced[i].z = reduced[i-1].z * 0.25 + reduced[i].z * 0.50 + reduced[i+1].z * 0.25;
-      reduced[i].nx = clamp(reduced[i].x / SIZE + 0.5, 0, 1);
-      reduced[i].ny = clamp(0.5 - reduced[i].z / SIZE, 0, 1);
-    }
-  }
+  const step = Math.max(1, Math.floor(pts.length / 500));
+  const reduced = pts.filter((_, i) => i % step === 0);
 
-  function groundAtWorld(x, z){
-    const nx = clamp(x / SIZE + 0.5, 0, 1);
-    const ny = clamp(0.5 - z / SIZE, 0, 1);
-    return sampleH(nx, ny) * elevH;
+  if(reduced[reduced.length - 1] !== pts[pts.length - 1]){
+    reduced.push(pts[pts.length - 1]);
   }
 
   const verts = [];
   const idx = [];
   const halfW = cfg.traceW / 2;
-  const sink = 0.004; // léger recouvrement pour que le tracé colle au terrain à l'impression
 
   for(let i = 0; i < reduced.length; i++){
     const p = reduced[i];
@@ -993,28 +966,11 @@ function buildSide(s,hm,elevH,baseY,mat){
     const nx = -dz / len;
     const nz = dx / len;
 
-    const lx = p.x + nx * halfW;
-    const lz = p.z + nz * halfW;
-    const rx = p.x - nx * halfW;
-    const rz = p.z - nz * halfW;
-
-    // On prend aussi des points intermédiaires pour éviter que le relief passe au travers du dessus.
-    let maxGround = -Infinity;
-    for(const t of [-1, -0.5, 0, 0.5, 1]){
-      const sx = p.x + nx * halfW * t;
-      const sz = p.z + nz * halfW * t;
-      maxGround = Math.max(maxGround, groundAtWorld(sx, sz));
-    }
-
-    const groundL = groundAtWorld(lx, lz);
-    const groundR = groundAtWorld(rx, rz);
-    const topY = maxGround + cfg.traceH;
-
     verts.push(
-      lx, groundL - sink, lz,
-      rx, groundR - sink, rz,
-      lx, topY,          lz,
-      rx, topY,          rz
+      p.x + nx * halfW, p.bottom, p.z + nz * halfW,
+      p.x - nx * halfW, p.bottom, p.z - nz * halfW,
+      p.x + nx * halfW, p.top,    p.z + nz * halfW,
+      p.x - nx * halfW, p.top,    p.z - nz * halfW
     );
   }
 
@@ -1031,20 +987,96 @@ function buildSide(s,hm,elevH,baseY,mat){
     // côté droit
     idx.push(a+1, b+1, a+3, a+3, b+1, b+3);
 
-    // dessous, conforme au relief sous les deux bords
+    // dessous
     idx.push(a+0, b+0, a+1, a+1, b+0, b+1);
   }
 
-  // bouchons début / fin
-  idx.push(0, 2, 1, 1, 2, 3);
+  // bouchon début
+  idx.push(0, 1, 2, 2, 1, 3);
+
+  // bouchon fin
   const e = (reduced.length - 1) * 4;
-  idx.push(e+0, e+1, e+2, e+1, e+3, e+2);
+  idx.push(e+0, e+2, e+1, e+1, e+2, e+3);
 
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
-  g.computeBoundingSphere();
+
+  return g;
+}
+
+// ── Prévisualisation GPX propre ──────────────────────────────
+// Important : cette géométrie est utilisée uniquement pour l'affichage.
+// L'export STL utilise toujours createRaisedPathGeometry(), donc le STL reste inchangé.
+function createPreviewPathGeometry(elevH){
+  if(!normalizedPath || normalizedPath.length < 2){
+    return new THREE.BufferGeometry();
+  }
+
+  const rawPts = normalizedPath.map(p => ({
+    nx: p.nx,
+    ny: p.ny,
+    x: (p.nx - 0.5) * SIZE,
+    z: (0.5 - p.ny) * SIZE
+  }));
+
+  const step = Math.max(1, Math.floor(rawPts.length / 700));
+  const pts = rawPts.filter((_, i) => i % step === 0);
+  if(pts[pts.length - 1] !== rawPts[rawPts.length - 1]){
+    pts.push(rawPts[rawPts.length - 1]);
+  }
+
+  const verts = [];
+  const idx = [];
+  const halfW = cfg.traceW / 2;
+
+  // Petit décalage visuel : le chemin reste toujours au-dessus du relief.
+  // On dépend aussi de traceH, donc le slider Hauteur garde un effet visible.
+  const visualLift = Math.max(0.015, cfg.traceH * 0.35);
+
+  for(let i = 0; i < pts.length; i++){
+    const p = pts[i];
+    const prev = pts[Math.max(0, i - 1)];
+    const next = pts[Math.min(pts.length - 1, i + 1)];
+
+    const dx = next.x - prev.x;
+    const dz = next.z - prev.z;
+    const len = Math.hypot(dx, dz) || 1;
+
+    // Perpendiculaire dans le monde 3D
+    const px = -dz / len;
+    const pz = dx / len;
+
+    // Conversion offset monde -> coordonnées normalisées bbox
+    const leftNx  = clamp(p.nx + (px * halfW) / SIZE, 0, 1);
+    const leftNy  = clamp(p.ny - (pz * halfW) / SIZE, 0, 1);
+    const rightNx = clamp(p.nx - (px * halfW) / SIZE, 0, 1);
+    const rightNy = clamp(p.ny + (pz * halfW) / SIZE, 0, 1);
+
+    const leftX  = (leftNx - 0.5) * SIZE;
+    const leftZ  = (0.5 - leftNy) * SIZE;
+    const rightX = (rightNx - 0.5) * SIZE;
+    const rightZ = (0.5 - rightNy) * SIZE;
+
+    // Chaque bord du chemin échantillonne sa propre hauteur.
+    // Donc si traceW augmente, les côtés ne rentrent plus dans la montagne.
+    const leftY  = sampleH(leftNx, leftNy) * elevH + visualLift;
+    const rightY = sampleH(rightNx, rightNy) * elevH + visualLift;
+
+    verts.push(leftX, leftY, leftZ, rightX, rightY, rightZ);
+  }
+
+  for(let i = 0; i < pts.length - 1; i++){
+    const a = i * 2;
+    const b = (i + 1) * 2;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
   return g;
 }
 
@@ -1056,12 +1088,13 @@ function buildPath(elevH){
 
   if(!normalizedPath || normalizedPath.length < 2) return;
 
-  const pathGeo = createRaisedPathGeometry(elevH);
+  const pathGeo = createPreviewPathGeometry(elevH);
 
   pathObj = new THREE.Mesh(pathGeo, new THREE.MeshStandardMaterial({
     color: new THREE.Color(cfg.traceColor),
-    roughness: .45,
-    metalness: .04,
+    roughness: .55,
+    metalness: .02,
+    side: THREE.DoubleSide
   }));
 
   scene.add(pathObj);
