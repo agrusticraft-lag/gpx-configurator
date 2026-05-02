@@ -399,8 +399,25 @@
     <div class="section">
       <div class="stitle"><span class="num">6</span>Plaque gravée</div>
       <input type="text" id="txt1" value="Patrouille des Glaciers" placeholder="Ligne 1 — Nom de la course">
+      <select id="txt1Align">
+        <option value="left">Ligne 1 — Aligné à gauche</option>
+        <option value="center" selected>Ligne 1 — Centré</option>
+        <option value="right">Ligne 1 — Aligné à droite</option>
+      </select>
+
       <input type="text" id="txt2" value="57.5 km · 4380 m D+" placeholder="Ligne 2 — Stats">
+      <select id="txt2Align">
+        <option value="left">Ligne 2 — Aligné à gauche</option>
+        <option value="center" selected>Ligne 2 — Centré</option>
+        <option value="right">Ligne 2 — Aligné à droite</option>
+      </select>
+
       <input type="text" id="txt3" value="" placeholder="Ligne 3 — Noms / Date (optionnel)">
+      <select id="txt3Align">
+        <option value="left">Ligne 3 — Aligné à gauche</option>
+        <option value="center" selected>Ligne 3 — Centré</option>
+        <option value="right">Ligne 3 — Aligné à droite</option>
+      </select>
     </div>
 
     <!-- 7 · Taille -->
@@ -493,6 +510,8 @@ let cfg = {
   traceW: 0.07, traceH: 0.09, traceColor: '#d45000',
   terrainColor: '#e8e4dc',
   txt1: 'Patrouille des Glaciers', txt2: '57.5 km · 4380 m D+', txt3: '',
+  txt1Align: 'center', txt2Align: 'center', txt3Align: 'center',
+  textLetterSpacing: -3,
 };
 
 const $     = id => document.getElementById(id);
@@ -857,22 +876,54 @@ function makeTextTexture(text, opts={}){
   ctx.fillStyle = opts.bg || 'rgba(0,0,0,0)';
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  ctx.fillStyle = opts.color || '#2a1608';
-  ctx.textAlign = 'center';
+  ctx.fillStyle = opts.color || '#1a0f05';
   ctx.textBaseline = 'middle';
-  ctx.font = `600 ${opts.fontSize || 96}px "Barlow Condensed", Arial, sans-serif`; // 96 px canvas ≈ rendu 24 pt en preview
 
   const clean = (text || '').trim();
-  const label = clean || ' ';
+  const label = (clean || ' ').toUpperCase();
+  const align = opts.align || 'center';
+  const letterSpacing = opts.letterSpacing ?? -3; // négatif = texte plus serré
   const maxWidth = canvas.width * 0.86;
-  let fontSize = opts.fontSize || 96;
+  let fontSize = opts.fontSize || 120;
 
-  while(ctx.measureText(label).width > maxWidth && fontSize > 50){
-    fontSize -= 2;
+  function setFont(){
     ctx.font = `600 ${fontSize}px "Barlow Condensed", Arial, sans-serif`;
   }
 
-  ctx.fillText(label.toUpperCase(), canvas.width/2, canvas.height/2);
+  function measureTextWithSpacing(str, spacing){
+    const chars = str.split('');
+    let total = 0;
+    for(const c of chars) total += ctx.measureText(c).width + spacing;
+    return Math.max(0, total - spacing);
+  }
+
+  setFont();
+  while(measureTextWithSpacing(label, letterSpacing) > maxWidth && fontSize > 72){
+    fontSize -= 2;
+    setFont();
+  }
+
+  function drawTextWithSpacing(str, x, y, spacing, alignMode){
+    const chars = str.split('');
+    const totalWidth = measureTextWithSpacing(str, spacing);
+
+    let startX = x;
+    if(alignMode === 'center') startX = x - totalWidth / 2;
+    if(alignMode === 'right')  startX = x - totalWidth;
+
+    let currentX = startX;
+    for(const c of chars){
+      ctx.fillText(c, currentX, y);
+      currentX += ctx.measureText(c).width + spacing;
+    }
+  }
+
+  const padding = canvas.width * 0.07;
+  let x = canvas.width / 2;
+  if(align === 'left') x = padding;
+  if(align === 'right') x = canvas.width - padding;
+
+  drawTextWithSpacing(label, x, canvas.height / 2, letterSpacing, align);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.encoding = THREE.sRGBEncoding;
@@ -880,10 +931,10 @@ function makeTextTexture(text, opts={}){
   return tex;
 }
 
-function addFaceText(group, text, side, yCenter, baseH){
+function addFaceText(group, text, side, yCenter, baseH, align='center'){
   if(!text || !text.trim()) return;
 
-  const tex = makeTextTexture(text);
+  const tex = makeTextTexture(text, { align, letterSpacing: cfg.textLetterSpacing });
   const mat = new THREE.MeshBasicMaterial({
     map: tex,
     transparent: true,
@@ -892,7 +943,7 @@ function addFaceText(group, text, side, yCenter, baseH){
   });
 
   const textW = SIZE * 0.72;
-  const textH = Math.min(baseH * 0.75, SIZE * 0.28);
+  const textH = Math.min(baseH * 0.9, SIZE * 0.35);
   const geo = new THREE.PlaneGeometry(textW, textH);
   const mesh = new THREE.Mesh(geo, mat);
   const eps = 0.006;
@@ -998,9 +1049,9 @@ function addPreviewWoodBase(group, baseY){
   group.add(base);
 
   // Lignes sur les faces du socle : Sud = ligne 1, Est = ligne 2, Ouest = ligne 3.
-  addFaceText(group, cfg.txt1, 'S', yCenter, baseHeightWorld);
-  addFaceText(group, cfg.txt2, 'E', yCenter, baseHeightWorld);
-  addFaceText(group, cfg.txt3, 'W', yCenter, baseHeightWorld);
+  addFaceText(group, cfg.txt1, 'S', yCenter, baseHeightWorld, cfg.txt1Align);
+  addFaceText(group, cfg.txt2, 'E', yCenter, baseHeightWorld, cfg.txt2Align);
+  addFaceText(group, cfg.txt3, 'W', yCenter, baseHeightWorld, cfg.txt3Align);
 }
 
 function buildScene(){
@@ -1553,6 +1604,10 @@ $('pgrid').querySelectorAll('.popt').forEach(el=>el.addEventListener('click',()=
 $('txt1').addEventListener('input',()=>{ cfg.txt1=$('txt1').value; updatePlate(); if(heightmapCache) buildScene(); });
 $('txt2').addEventListener('input',()=>{ cfg.txt2=$('txt2').value; updatePlate(); if(heightmapCache) buildScene(); });
 $('txt3').addEventListener('input',()=>{ cfg.txt3=$('txt3').value; updatePlate(); if(heightmapCache) buildScene(); });
+
+$('txt1Align').addEventListener('change',()=>{ cfg.txt1Align=$('txt1Align').value; if(heightmapCache) buildScene(); });
+$('txt2Align').addEventListener('change',()=>{ cfg.txt2Align=$('txt2Align').value; if(heightmapCache) buildScene(); });
+$('txt3Align').addEventListener('change',()=>{ cfg.txt3Align=$('txt3Align').value; if(heightmapCache) buildScene(); });
 
 // Taille modèle
 $('sizeGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('click',()=>{
