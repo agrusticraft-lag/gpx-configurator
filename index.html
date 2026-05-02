@@ -43,7 +43,7 @@
       background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
       padding:4px 10px;border-radius:2px;
     }
- 
+
     /* ── Layout ── */
     #app{
       display:grid;
@@ -417,10 +417,10 @@
     <!-- 8 · Export -->
     <div class="section">
       <div class="stitle"><span class="num">8</span>Export &amp; Commande</div>
-     <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger Terrain + GPX</button>
+     <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger 3MF</button>
       <button class="btn btn-green" id="orderBtn" disabled>Commander →</button>
       <div class="note" style="margin-top:8px">
-        STL prêt à slicer — terrain + socle + tracé. Recommandé : 0.15 mm, 20% infill, PLA mat.
+        3MF prêt à slicer — terrain + tracé GPX dans un seul fichier. Recommandé : 0.15 mm, 20% infill, PLA mat.
       </div>
     </div>
 
@@ -938,7 +938,7 @@ function buildSide(s,hm,elevH,baseY,mat){
     return {
       x,
       z,
-      bottom: ground - 0.01,
+      bottom: ground - 0.002,
       top: ground + cfg.traceH
     };
   });
@@ -1235,46 +1235,196 @@ return g;
   geo.dispose();
   return tris;
 }
-function exportSTL(){
+function xmlEscape(v){
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function geometryTo3MFMesh(geo, scale){
+  const pos = geo.attributes.position;
+  const ix = geo.index;
+  const vertices = [];
+  const triangles = [];
+
+  for(let i = 0; i < pos.count; i++){
+    vertices.push({
+      x: +(pos.getX(i) * scale).toFixed(5),
+      y: +(pos.getY(i) * scale).toFixed(5),
+      z: +(pos.getZ(i) * scale).toFixed(5)
+    });
+  }
+
+  if(ix){
+    for(let i = 0; i < ix.count; i += 3){
+      triangles.push([ix.getX(i), ix.getX(i + 1), ix.getX(i + 2)]);
+    }
+  } else {
+    for(let i = 0; i < pos.count; i += 3){
+      triangles.push([i, i + 1, i + 2]);
+    }
+  }
+
+  geo.dispose();
+  return { vertices, triangles };
+}
+
+function build3MFModel(meshes){
+  const vertexXml = mesh => mesh.vertices
+    .map(v => `<vertex x="${v.x}" y="${v.y}" z="${v.z}"/>`)
+    .join('');
+
+  const triangleXml = mesh => mesh.triangles
+    .map(t => `<triangle v1="${t[0]}" v2="${t[1]}" v3="${t[2]}"/>`)
+    .join('');
+
+  const objectsXml = meshes.map(mesh => `
+    <object id="${mesh.id}" type="model" name="${xmlEscape(mesh.name)}">
+      <mesh>
+        <vertices>${vertexXml(mesh)}</vertices>
+        <triangles>${triangleXml(mesh)}</triangles>
+      </mesh>
+    </object>`).join('');
+
+  const itemsXml = meshes
+    .map(mesh => `<item objectid="${mesh.id}"/>`)
+    .join('');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="fr-FR" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+  <metadata name="Application">Relief3D</metadata>
+  <metadata name="Title">${xmlEscape(cfg.txt1 || 'Relief3D')}</metadata>
+  <resources>${objectsXml}
+  </resources>
+  <build>${itemsXml}</build>
+</model>`;
+}
+
+function crc32(str){
+  const table = crc32.table || (crc32.table = (() => {
+    const t = new Uint32Array(256);
+    for(let i = 0; i < 256; i++){
+      let c = i;
+      for(let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      t[i] = c >>> 0;
+    }
+    return t;
+  })());
+
+  const bytes = new TextEncoder().encode(str);
+  let c = 0xffffffff;
+  for(const b of bytes) c = table[(c ^ b) & 0xff] ^ (c >>> 8);
+  return { crc: (c ^ 0xffffffff) >>> 0, bytes };
+}
+
+function makeZipStore(files){
+  const parts = [];
+  const central = [];
+  let offset = 0;
+
+  const u16 = v => new Uint8Array([v & 255, (v >>> 8) & 255]);
+  const u32 = v => new Uint8Array([v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]);
+
+  for(const file of files){
+    const nameBytes = new TextEncoder().encode(file.name);
+    const {crc, bytes} = crc32(file.content);
+    const size = bytes.length;
+
+    const local = new Uint8Array([
+      ...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
+      ...u32(crc), ...u32(size), ...u32(size), ...u16(nameBytes.length), ...u16(0)
+    ]);
+
+    parts.push(local, nameBytes, bytes);
+
+    const centralHeader = new Uint8Array([
+      ...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
+      ...u32(crc), ...u32(size), ...u32(size), ...u16(nameBytes.length), ...u16(0), ...u16(0),
+      ...u16(0), ...u16(0), ...u32(0), ...u32(offset)
+    ]);
+    central.push(centralHeader, nameBytes);
+
+    offset += local.length + nameBytes.length + bytes.length;
+  }
+
+  const centralSize = central.reduce((sum, p) => sum + p.length, 0);
+  const centralOffset = offset;
+  const end = new Uint8Array([
+    ...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length),
+    ...u32(centralSize), ...u32(centralOffset), ...u16(0)
+  ]);
+
+  return new Blob([...parts, ...central, end], {type:'model/3mf'});
+}
+
+function download3MF(filename, modelXml){
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
+</Types>`;
+
+  const rels = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
+</Relationships>`;
+
+  const blob = makeZipStore([
+    {name:'[Content_Types].xml', content:contentTypes},
+    {name:'_rels/.rels', content:rels},
+    {name:'3D/3dmodel.model', content:modelXml}
+  ]);
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function export3MF(){
   if(!heightmapCache){
     alert('Charge d\'abord un fichier GPX.');
     return;
   }
 
-  setStatus('Génération des STL terrain + GPX…');
+  setStatus('Génération du fichier 3MF…');
 
   const elevH = 1.8 * (cfg.elevScale / 4);
   const baseY = -cfg.baseThick;
   const hm = heightmapCache.heights;
+  const scale = currentSizeMm / SIZE;
 
-  const safeName = cfg.txt1
+  const safeName = (cfg.txt1 || 'relief3d')
     .replace(/\s+/g, '-')
     .replace(/[^\w\-]/g, '')
     .toLowerCase();
 
-  // 1. STL terrain seul
+  const meshes = [];
+
   const terrainGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
-  const terrainTris = collectTrianglesFromGeometry(terrainGeo);
+  meshes.push({
+    id: 1,
+    name: 'Terrain relief',
+    ...geometryTo3MFMesh(terrainGeo, scale)
+  });
 
-  downloadSTLFromTriangles(
-    terrainTris,
-    `terrain-${safeName}-${currentSizeMm}mm.stl`
-  );
-
-  // 2. STL tracé GPX seul
   if(normalizedPath && normalizedPath.length > 1){
     const traceGeo = createRaisedPathGeometry(elevH);
-    const traceTris = collectTrianglesFromGeometry(traceGeo);
-
-    setTimeout(() => {
-      downloadSTLFromTriangles(
-        traceTris,
-        `trace-gpx-${safeName}-${currentSizeMm}mm.stl`
-      );
-    }, 300);
+    meshes.push({
+      id: 2,
+      name: 'Trace GPX',
+      ...geometryTo3MFMesh(traceGeo, scale)
+    });
   }
 
-  setStatus('✓ STL terrain + tracé GPX exportés séparément');
+  const modelXml = build3MFModel(meshes);
+  download3MF(`relief3d-${safeName}-${currentSizeMm}mm.3mf`, modelXml);
+  setStatus('✓ 3MF exporté : terrain + tracé GPX dans un seul fichier');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1458,7 +1608,7 @@ $('loadBtn').addEventListener('click', async function(){
   }
 });
 
-$('stlBtn').addEventListener('click', exportSTL);
+$('stlBtn').addEventListener('click', export3MF);
 
 $('orderBtn').addEventListener('click',()=>{
   if(!heightmapCache){ alert('Charge d\'abord un GPX.'); return; }
