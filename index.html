@@ -867,9 +867,16 @@ function clearObj(o){
 
 // ── Socle bois PREVIEW uniquement ─────────────────────────────
 function makeTextTexture(text, opts={}){
+  // Texture adaptée aux dimensions réelles de la face du socle.
+  // La hauteur du texte reste stable car le socle fait toujours 17 mm,
+  // tandis que la largeur disponible suit la taille du modèle (100/150/200/250 mm).
+  const textWidthMm  = opts.textWidthMm  || Math.max(40, currentSizeMm - 24);
+  const textHeightMm = opts.textHeightMm || 10.5;
+  const aspect = clamp(textWidthMm / textHeightMm, 4, 18);
+
   const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 256;
+  canvas.height = 512;
+  canvas.width = Math.round(canvas.height * aspect);
   const ctx = canvas.getContext('2d');
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -882,9 +889,14 @@ function makeTextTexture(text, opts={}){
   const clean = (text || '').trim();
   const label = (clean || ' ').toUpperCase();
   const align = opts.align || 'center';
-  const letterSpacing = opts.letterSpacing ?? -3; // négatif = texte plus serré
-  const maxWidth = canvas.width * 0.86;
-  let fontSize = opts.fontSize || 120;
+  const letterSpacing = opts.letterSpacing ?? -3;
+
+  // 24 pt ≈ 32 px, mais ici on travaille dans une texture haute résolution.
+  // Ce facteur garde un rendu proche de 24 pt sur un socle de 17 mm.
+  let fontSize = Math.round(canvas.height * 0.58);
+  const minFontSize = Math.round(canvas.height * 0.34);
+  const padding = canvas.width * 0.055;
+  const maxWidth = canvas.width - padding * 2;
 
   function setFont(){
     ctx.font = `600 ${fontSize}px "Barlow Condensed", Arial, sans-serif`;
@@ -898,7 +910,7 @@ function makeTextTexture(text, opts={}){
   }
 
   setFont();
-  while(measureTextWithSpacing(label, letterSpacing) > maxWidth && fontSize > 72){
+  while(measureTextWithSpacing(label, letterSpacing) > maxWidth && fontSize > minFontSize){
     fontSize -= 2;
     setFont();
   }
@@ -908,6 +920,7 @@ function makeTextTexture(text, opts={}){
     const totalWidth = measureTextWithSpacing(str, spacing);
 
     let startX = x;
+    if(alignMode === 'left')   startX = x;
     if(alignMode === 'center') startX = x - totalWidth / 2;
     if(alignMode === 'right')  startX = x - totalWidth;
 
@@ -918,7 +931,6 @@ function makeTextTexture(text, opts={}){
     }
   }
 
-  const padding = canvas.width * 0.07;
   let x = canvas.width / 2;
   if(align === 'left') x = padding;
   if(align === 'right') x = canvas.width - padding;
@@ -934,7 +946,18 @@ function makeTextTexture(text, opts={}){
 function addFaceText(group, text, side, yCenter, baseH, align='center'){
   if(!text || !text.trim()) return;
 
-  const tex = makeTextTexture(text, { align, letterSpacing: cfg.textLetterSpacing });
+  const BASE_HEIGHT_MM = 17;
+  const TEXT_MARGIN_MM = 12;      // marge gauche/droite réelle sur le socle
+  const TEXT_HEIGHT_MM = 10.5;    // hauteur réelle du champ texte, stable car le socle reste à 17 mm
+  const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
+
+  const tex = makeTextTexture(text, {
+    align,
+    letterSpacing: cfg.textLetterSpacing,
+    textWidthMm,
+    textHeightMm: TEXT_HEIGHT_MM
+  });
+
   const mat = new THREE.MeshBasicMaterial({
     map: tex,
     transparent: true,
@@ -942,8 +965,11 @@ function addFaceText(group, text, side, yCenter, baseH, align='center'){
     side: THREE.DoubleSide
   });
 
-  const textW = SIZE * 0.72;
-  const textH = Math.min(baseH * 0.9, SIZE * 0.35);
+  // Conversion mm réel → unités Three.js.
+  // Ainsi : hauteur constante peu importe la taille du modèle,
+  // largeur qui suit la largeur réelle du socle.
+  const textW = SIZE * (textWidthMm / currentSizeMm);
+  const textH = SIZE * (TEXT_HEIGHT_MM / currentSizeMm);
   const geo = new THREE.PlaneGeometry(textW, textH);
   const mesh = new THREE.Mesh(geo, mat);
   const eps = 0.006;
