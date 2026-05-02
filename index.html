@@ -930,29 +930,29 @@ function buildSide(s,hm,elevH,baseY,mat){
     return new THREE.BufferGeometry();
   }
 
-  const pts = normalizedPath.map(p => {
-    const x = (p.nx - 0.5) * SIZE;
-    const z = (0.5 - p.ny) * SIZE;
-    const ground = sampleH(p.nx, p.ny) * elevH;
+  // Prévisualisation robuste :
+  // - la position du tracé est calculée avec le point le plus haut sous sa largeur
+  // - la hauteur du tracé est ensuite ajoutée au-dessus, sans déplacer le parcours
+  // - l'export STL garde la même logique de géométrie, mais la preview ne rentre plus dans la montagne
+  const rawPts = normalizedPath.map(p => ({
+    nx: p.nx,
+    ny: p.ny,
+    x: (p.nx - 0.5) * SIZE,
+    z: (0.5 - p.ny) * SIZE
+  }));
 
-    return {
-      x,
-      z,
-      bottom: ground - 0.01,
-      top: ground + cfg.traceH
-    };
-  });
+  const step = Math.max(1, Math.floor(rawPts.length / 500));
+  const reduced = rawPts.filter((_, i) => i % step === 0);
 
-  const step = Math.max(1, Math.floor(pts.length / 500));
-  const reduced = pts.filter((_, i) => i % step === 0);
-
-  if(reduced[reduced.length - 1] !== pts[pts.length - 1]){
-    reduced.push(pts[pts.length - 1]);
+  if(reduced[reduced.length - 1] !== rawPts[rawPts.length - 1]){
+    reduced.push(rawPts[rawPts.length - 1]);
   }
 
   const verts = [];
   const idx = [];
   const halfW = cfg.traceW / 2;
+  const samples = 7;
+  const visualOffset = 0.002;
 
   for(let i = 0; i < reduced.length; i++){
     const p = reduced[i];
@@ -963,14 +963,35 @@ function buildSide(s,hm,elevH,baseY,mat){
     const dz = next.z - prev.z;
     const len = Math.hypot(dx, dz) || 1;
 
-    const nx = -dz / len;
-    const nz = dx / len;
+    // Perpendiculaire en coordonnées monde
+    const nxWorld = -dz / len;
+    const nzWorld = dx / len;
+
+    // Conversion de la perpendiculaire monde vers coordonnées normalisées GPX/heightmap
+    // world x = (nx - 0.5) * SIZE  => delta nx = delta x / SIZE
+    // world z = (0.5 - ny) * SIZE  => delta ny = -delta z / SIZE
+    const nxMap = nxWorld / SIZE;
+    const nyMap = -nzWorld / SIZE;
+
+    let maxGround = -Infinity;
+
+    // On cherche l'altitude max sous toute la largeur du tracé
+    for(let s = 0; s < samples; s++){
+      const t = (s / (samples - 1) - 0.5) * cfg.traceW;
+      const sx = p.nx + nxMap * t;
+      const sy = p.ny + nyMap * t;
+      const h = sampleH(sx, sy) * elevH;
+      if(h > maxGround) maxGround = h;
+    }
+
+    const bottom = maxGround + visualOffset;
+    const top = bottom + cfg.traceH;
 
     verts.push(
-      p.x + nx * halfW, p.bottom, p.z + nz * halfW,
-      p.x - nx * halfW, p.bottom, p.z - nz * halfW,
-      p.x + nx * halfW, p.top,    p.z + nz * halfW,
-      p.x - nx * halfW, p.top,    p.z - nz * halfW
+      p.x + nxWorld * halfW, bottom, p.z + nzWorld * halfW,
+      p.x - nxWorld * halfW, bottom, p.z - nzWorld * halfW,
+      p.x + nxWorld * halfW, top,    p.z + nzWorld * halfW,
+      p.x - nxWorld * halfW, top,    p.z - nzWorld * halfW
     );
   }
 
@@ -1006,81 +1027,6 @@ function buildSide(s,hm,elevH,baseY,mat){
   return g;
 }
 
-// ── Prévisualisation GPX propre ──────────────────────────────
-// Important : cette géométrie est utilisée uniquement pour l'affichage.
-// L'export STL utilise toujours createRaisedPathGeometry(), donc le STL reste inchangé.
-function createPreviewPathGeometry(elevH){
-  if(!normalizedPath || normalizedPath.length < 2){
-    return new THREE.BufferGeometry();
-  }
-
-  const rawPts = normalizedPath.map(p => ({
-    nx: p.nx,
-    ny: p.ny,
-    x: (p.nx - 0.5) * SIZE,
-    z: (0.5 - p.ny) * SIZE
-  }));
-
-  const step = Math.max(1, Math.floor(rawPts.length / 700));
-  const pts = rawPts.filter((_, i) => i % step === 0);
-  if(pts[pts.length - 1] !== rawPts[rawPts.length - 1]){
-    pts.push(rawPts[rawPts.length - 1]);
-  }
-
-  const verts = [];
-  const idx = [];
-  const halfW = cfg.traceW / 2;
-
-  // Petit décalage visuel constant :
-  // la prévisualisation reste collée au relief même quand on change la hauteur du STL.
-  // Le slider Hauteur agit toujours sur l'export STL, mais ne fait plus monter/descendre le tracé affiché.
-  const visualLift = 0.018;
-
-  for(let i = 0; i < pts.length; i++){
-    const p = pts[i];
-    const prev = pts[Math.max(0, i - 1)];
-    const next = pts[Math.min(pts.length - 1, i + 1)];
-
-    const dx = next.x - prev.x;
-    const dz = next.z - prev.z;
-    const len = Math.hypot(dx, dz) || 1;
-
-    // Perpendiculaire dans le monde 3D
-    const px = -dz / len;
-    const pz = dx / len;
-
-    // Conversion offset monde -> coordonnées normalisées bbox
-    const leftNx  = clamp(p.nx + (px * halfW) / SIZE, 0, 1);
-    const leftNy  = clamp(p.ny - (pz * halfW) / SIZE, 0, 1);
-    const rightNx = clamp(p.nx - (px * halfW) / SIZE, 0, 1);
-    const rightNy = clamp(p.ny + (pz * halfW) / SIZE, 0, 1);
-
-    const leftX  = (leftNx - 0.5) * SIZE;
-    const leftZ  = (0.5 - leftNy) * SIZE;
-    const rightX = (rightNx - 0.5) * SIZE;
-    const rightZ = (0.5 - rightNy) * SIZE;
-
-    // Chaque bord du chemin échantillonne sa propre hauteur.
-    // Donc si traceW augmente, les côtés ne rentrent plus dans la montagne.
-    const leftY  = sampleH(leftNx, leftNy) * elevH + visualLift;
-    const rightY = sampleH(rightNx, rightNy) * elevH + visualLift;
-
-    verts.push(leftX, leftY, leftZ, rightX, rightY, rightZ);
-  }
-
-  for(let i = 0; i < pts.length - 1; i++){
-    const a = i * 2;
-    const b = (i + 1) * 2;
-    idx.push(a, b, a + 1, a + 1, b, b + 1);
-  }
-
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  return g;
-}
-
 function buildPath(elevH){
   if(pathObj){
     clearObj(pathObj);
@@ -1089,13 +1035,12 @@ function buildPath(elevH){
 
   if(!normalizedPath || normalizedPath.length < 2) return;
 
-  const pathGeo = createPreviewPathGeometry(elevH);
+  const pathGeo = createRaisedPathGeometry(elevH);
 
   pathObj = new THREE.Mesh(pathGeo, new THREE.MeshStandardMaterial({
     color: new THREE.Color(cfg.traceColor),
-    roughness: .55,
-    metalness: .02,
-    side: THREE.DoubleSide
+    roughness: .45,
+    metalness: .04,
   }));
 
   scene.add(pathObj);
