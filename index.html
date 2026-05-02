@@ -988,37 +988,106 @@ function createRaisedPathGeometry(elevH){
     return new THREE.BufferGeometry();
   }
 
-  const radius = Math.max(0.006, cfg.traceW / 2);
-  const embed = Math.min(0.006, radius * 0.18);
+  // Chemin GPX en tube elliptique fermé :
+  // - largeur = cfg.traceW
+  // - hauteur = cfg.traceH
+  // - bas du tracé légèrement dans le relief pour éviter les micro-espaces
+  const rx = Math.max(0.006, cfg.traceW / 2);
+  const ry = Math.max(0.004, cfg.traceH / 2);
+  const embed = Math.min(0.004, ry * 0.18);
+  const radialSegments = 12;
 
   const rawPts = normalizedPath.map(p => {
     const x = (p.nx - 0.5) * SIZE;
     const z = (0.5 - p.ny) * SIZE;
     const ground = sampleH(p.nx, p.ny) * elevH;
 
-    // Tube rond fermé : le bas rentre très légèrement dans le terrain.
-    // C'est beaucoup plus manifold qu'un ruban extrudé avec jonctions à fermer.
-    return new THREE.Vector3(x, ground + radius - embed, z);
+    return new THREE.Vector3(
+      x,
+      ground + ry - embed, // bas ≈ ground - embed, haut ≈ ground + cfg.traceH - embed
+      z
+    );
   });
 
   const pts = cleanPathPoints(rawPts);
   if(pts.length < 2) return new THREE.BufferGeometry();
 
-  let geo;
+  const verts = [];
+  const idx = [];
 
-  if(pts.length === 2){
-    // Cas très court : tube droit fermé.
-    const curve = new THREE.LineCurve3(pts[0], pts[1]);
-    geo = new THREE.TubeGeometry(curve, 8, radius, 10, false);
-  } else {
-    // CatmullRom centripetal limite les boucles dans les virages serrés.
-    const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal', 0.35);
-    const segments = Math.max(16, Math.min(900, pts.length * 5));
-    geo = new THREE.TubeGeometry(curve, segments, radius, 10, false);
+  function ringNormal(i){
+    const prev = pts[Math.max(0, i - 1)];
+    const next = pts[Math.min(pts.length - 1, i + 1)];
+    let tx = next.x - prev.x;
+    let tz = next.z - prev.z;
+    const len = Math.hypot(tx, tz) || 1;
+    tx /= len;
+    tz /= len;
+
+    // normale horizontale au chemin
+    return { x: -tz, z: tx };
   }
 
-  // Sécurité : supprime les triangles dégénérés et reconstruit un index propre.
-  return cleanIndexedGeometry(geo);
+  // Anneaux elliptiques fermés
+  for(let i = 0; i < pts.length; i++){
+    const p = pts[i];
+    const n = ringNormal(i);
+
+    for(let j = 0; j < radialSegments; j++){
+      const a = 2 * Math.PI * j / radialSegments;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+
+      verts.push(
+        p.x + n.x * ca * rx,
+        p.y + sa * ry,
+        p.z + n.z * ca * rx
+      );
+    }
+  }
+
+  // Faces latérales
+  for(let i = 0; i < pts.length - 1; i++){
+    const a0 = i * radialSegments;
+    const b0 = (i + 1) * radialSegments;
+
+    for(let j = 0; j < radialSegments; j++){
+      const j2 = (j + 1) % radialSegments;
+      const a = a0 + j;
+      const b = a0 + j2;
+      const c = b0 + j;
+      const d = b0 + j2;
+
+      pushTriClean(idx, verts, a, c, b);
+      pushTriClean(idx, verts, b, c, d);
+    }
+  }
+
+  // Bouchon début
+  const startCenter = verts.length / 3;
+  verts.push(pts[0].x, pts[0].y, pts[0].z);
+  for(let j = 0; j < radialSegments; j++){
+    const j2 = (j + 1) % radialSegments;
+    pushTriClean(idx, verts, startCenter, j2, j);
+  }
+
+  // Bouchon fin
+  const endCenter = verts.length / 3;
+  const lastBase = (pts.length - 1) * radialSegments;
+  const last = pts[pts.length - 1];
+  verts.push(last.x, last.y, last.z);
+  for(let j = 0; j < radialSegments; j++){
+    const j2 = (j + 1) % radialSegments;
+    pushTriClean(idx, verts, endCenter, lastBase + j, lastBase + j2);
+  }
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+
+  return cleanIndexedGeometry(g);
 }
 
 function cleanIndexedGeometry(geo){
@@ -1520,7 +1589,7 @@ function export3MF(){
 
   const modelXml = build3MFModel(meshes);
   download3MF(`relief3d-${safeName}-${currentSizeMm}mm.3mf`, modelXml);
-  setStatus('✓ 3MF exporté : terrain + tracé GPX en tube fermé');
+  setStatus('✓ 3MF exporté : terrain + tracé GPX elliptique fermé');
 }
 
 // ══════════════════════════════════════════════════════════════
