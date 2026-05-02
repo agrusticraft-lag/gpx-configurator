@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Relief3D — Configurateur terrain alpin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --ink: #0d0d0b;
@@ -860,16 +860,16 @@ function makeTextTexture(text, opts={}){
   ctx.fillStyle = opts.color || '#2a1608';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `600 ${opts.fontSize || 80}px Space Grotesk, Arial, sans-serif`;
+  ctx.font = `600 ${opts.fontSize || 96}px "Barlow Condensed", Arial, sans-serif`; // 96 px canvas ≈ rendu 24 pt en preview
 
   const clean = (text || '').trim();
   const label = clean || ' ';
   const maxWidth = canvas.width * 0.86;
-  let fontSize = opts.fontSize || 80;
+  let fontSize = opts.fontSize || 96;
 
-  while(ctx.measureText(label).width > maxWidth && fontSize > 40){
+  while(ctx.measureText(label).width > maxWidth && fontSize > 50){
     fontSize -= 2;
-    ctx.font = `600 ${fontSize}px Space Grotesk, Arial, sans-serif`;
+    ctx.font = `600 ${fontSize}px "Barlow Condensed", Arial, sans-serif`;
   }
 
   ctx.fillText(label.toUpperCase(), canvas.width/2, canvas.height/2);
@@ -974,10 +974,10 @@ function makeOakLamelleTexture(){
 }
 
 function addPreviewWoodBase(group, baseY){
-  // Hauteur réelle voulue : environ 1 cm = 10 mm.
+  // Hauteur réelle voulue : 17 mm.
   // Dans la preview, SIZE correspond à la largeur choisie : 100/150/200/250 mm.
   // IMPORTANT : ce socle est ajouté uniquement dans Three.js, jamais dans exportSTL().
-  const baseHeightWorld = SIZE * (10 / currentSizeMm);
+  const baseHeightWorld = SIZE * (17 / currentSizeMm);
   const yCenter = baseY - baseHeightWorld / 2;
 
   const oakTexture = makeOakLamelleTexture(); // texture chêne massif
