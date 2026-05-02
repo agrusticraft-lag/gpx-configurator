@@ -860,14 +860,14 @@ function makeTextTexture(text, opts={}){
   ctx.fillStyle = opts.color || '#2a1608';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `600 ${opts.fontSize || 54}px Space Grotesk, Arial, sans-serif`;
+  ctx.font = `600 ${opts.fontSize || 80}px Space Grotesk, Arial, sans-serif`;
 
   const clean = (text || '').trim();
   const label = clean || ' ';
   const maxWidth = canvas.width * 0.86;
-  let fontSize = opts.fontSize || 54;
+  let fontSize = opts.fontSize || 80;
 
-  while(ctx.measureText(label).width > maxWidth && fontSize > 24){
+  while(ctx.measureText(label).width > maxWidth && fontSize > 40){
     fontSize -= 2;
     ctx.font = `600 ${fontSize}px Space Grotesk, Arial, sans-serif`;
   }
@@ -892,7 +892,7 @@ function addFaceText(group, text, side, yCenter, baseH){
   });
 
   const textW = SIZE * 0.72;
-  const textH = Math.min(baseH * 0.46, SIZE * 0.18);
+  const textH = Math.min(baseH * 0.75, SIZE * 0.28);
   const geo = new THREE.PlaneGeometry(textW, textH);
   const mesh = new THREE.Mesh(geo, mat);
   const eps = 0.006;
@@ -919,69 +919,56 @@ function makeOakLamelleTexture(){
   canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
-  // Chêne lamellé-collé procédural : bandes légèrement différentes + veinage discret.
-  const plankCount = 9;
-  const baseColors = [
-    [184,151,99],
-    [202,172,116],
-    [164,128,78],
-    [214,184,128],
-    [176,139,88],
-    [196,160,106]
-  ];
+  // Chêne massif procédural : couleur plus foncée, veinage continu, sans bandes lamellées.
+  const base = [150, 105, 60];
 
-  let y = 0;
-  for(let i = 0; i < plankCount; i++){
-    const h = Math.round(canvas.height / plankCount) + (i % 3 - 1) * 8;
-    const c = baseColors[i % baseColors.length];
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, `rgb(${base[0]-14},${base[1]-12},${base[2]-10})`);
+  grad.addColorStop(0.45, `rgb(${base[0]+20},${base[1]+15},${base[2]+10})`);
+  grad.addColorStop(1, `rgb(${base[0]-8},${base[1]-8},${base[2]-6})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const grad = ctx.createLinearGradient(0, y, canvas.width, y + h);
-    grad.addColorStop(0, `rgb(${c[0]-8},${c[1]-8},${c[2]-6})`);
-    grad.addColorStop(0.45, `rgb(${c[0]+14},${c[1]+12},${c[2]+8})`);
-    grad.addColorStop(1, `rgb(${c[0]-4},${c[1]-4},${c[2]-2})`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, y, canvas.width, h);
+  // Veinage naturel continu.
+  for(let k = 0; k < 48; k++){
+    ctx.beginPath();
+    const y = Math.random() * canvas.height;
+    ctx.moveTo(0, y);
 
-    // Joint entre les lames.
-    ctx.fillStyle = 'rgba(80,45,20,0.13)';
-    ctx.fillRect(0, y, canvas.width, 2);
-
-    // Veinage horizontal irrégulier.
-    for(let k = 0; k < 18; k++){
-      const yy = y + Math.random() * h;
-      ctx.beginPath();
-      ctx.moveTo(0, yy);
-      for(let x = 0; x <= canvas.width; x += 32){
-        const wave = Math.sin((x * 0.018) + i * 1.7 + k) * 5 + Math.sin(x * 0.045 + k) * 2;
-        ctx.lineTo(x, yy + wave);
-      }
-      ctx.strokeStyle = k % 3 === 0 ? 'rgba(80,45,20,0.13)' : 'rgba(255,245,210,0.10)';
-      ctx.lineWidth = k % 4 === 0 ? 1.4 : 0.7;
-      ctx.stroke();
+    for(let x = 0; x <= canvas.width; x += 24){
+      const wave =
+        Math.sin(x * 0.010 + k * 0.8) * 8 +
+        Math.sin(x * 0.032 + k * 1.4) * 3 +
+        Math.sin(x * 0.065 + k) * 1.5;
+      ctx.lineTo(x, y + wave);
     }
 
-    // Quelques noeuds très légers.
-    if(i % 2 === 0){
-      const kx = 120 + ((i * 173) % 760);
-      const ky = y + h * (0.35 + (i % 3) * 0.12);
-      const rg = ctx.createRadialGradient(kx, ky, 2, kx, ky, 34);
-      rg.addColorStop(0, 'rgba(95,55,25,0.18)');
-      rg.addColorStop(0.45, 'rgba(130,80,35,0.10)');
-      rg.addColorStop(1, 'rgba(130,80,35,0)');
-      ctx.fillStyle = rg;
-      ctx.beginPath();
-      ctx.ellipse(kx, ky, 42, 16, 0.15, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.strokeStyle = k % 3 === 0
+      ? 'rgba(80,42,16,0.18)'
+      : 'rgba(255,225,170,0.08)';
+    ctx.lineWidth = k % 5 === 0 ? 1.6 : 0.8;
+    ctx.stroke();
+  }
 
-    y += h;
+  // Quelques noeuds discrets pour garder un aspect bois massif.
+  for(let i = 0; i < 5; i++){
+    const kx = 120 + ((i * 181) % 800);
+    const ky = 140 + ((i * 237) % 760);
+    const rg = ctx.createRadialGradient(kx, ky, 2, kx, ky, 52);
+    rg.addColorStop(0, 'rgba(70,35,12,0.22)');
+    rg.addColorStop(0.45, 'rgba(110,60,25,0.12)');
+    rg.addColorStop(1, 'rgba(110,60,25,0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.ellipse(kx, ky, 55, 22, 0.18, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.encoding = THREE.sRGBEncoding;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(1.15, 1.15);
+  tex.repeat.set(1.2, 1.2);
   tex.anisotropy = 8;
   return tex;
 }
@@ -993,10 +980,10 @@ function addPreviewWoodBase(group, baseY){
   const baseHeightWorld = SIZE * (10 / currentSizeMm);
   const yCenter = baseY - baseHeightWorld / 2;
 
-  const oakTexture = makeOakLamelleTexture();
+  const oakTexture = makeOakLamelleTexture(); // texture chêne massif
   const woodMat = new THREE.MeshStandardMaterial({
     map: oakTexture,
-    color: 0xd2aa72,
+    color: 0xb07a40,
     roughness: 0.92,
     metalness: 0.0,
     bumpMap: oakTexture,
