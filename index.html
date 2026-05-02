@@ -1031,9 +1031,10 @@ function createPreviewPathGeometry(elevH){
   const idx = [];
   const halfW = cfg.traceW / 2;
 
-  // Petit décalage visuel : le chemin reste toujours au-dessus du relief.
-  // On dépend aussi de traceH, donc le slider Hauteur garde un effet visible.
-  const visualLift = Math.max(0.015, cfg.traceH * 0.35);
+  // Petit décalage visuel constant :
+  // la prévisualisation reste collée au relief même quand on change la hauteur du STL.
+  // Le slider Hauteur agit toujours sur l'export STL, mais ne fait plus monter/descendre le tracé affiché.
+  const visualLift = 0.018;
 
   for(let i = 0; i < pts.length; i++){
     const p = pts[i];
