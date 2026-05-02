@@ -417,10 +417,10 @@
     <!-- 8 · Export -->
     <div class="section">
       <div class="stitle"><span class="num">8</span>Export &amp; Commande</div>
-     <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger 3MF</button>
+     <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger Terrain + GPX</button>
       <button class="btn btn-green" id="orderBtn" disabled>Commander →</button>
       <div class="note" style="margin-top:8px">
-        3MF prêt à slicer — terrain + tracé GPX dans un seul fichier. Recommandé : 0.15 mm, 20% infill, PLA mat.
+        STL prêt à slicer — terrain + socle + tracé. Recommandé : 0.15 mm, 20% infill, PLA mat.
       </div>
     </div>
 
@@ -925,220 +925,84 @@ function buildSide(s,hm,elevH,baseY,mat){
   return new THREE.Mesh(g,mat);
 }
 
-function triangleArea3(ax,ay,az,bx,by,bz,cx,cy,cz){
-  const abx = bx - ax, aby = by - ay, abz = bz - az;
-  const acx = cx - ax, acy = cy - ay, acz = cz - az;
-  const cxv = aby * acz - abz * acy;
-  const cyv = abz * acx - abx * acz;
-  const czv = abx * acy - aby * acx;
-  return 0.5 * Math.hypot(cxv, cyv, czv);
-}
-
-function pushTriClean(idx, verts, a, b, c, eps = 1e-8){
-  const ax = verts[a*3], ay = verts[a*3+1], az = verts[a*3+2];
-  const bx = verts[b*3], by = verts[b*3+1], bz = verts[b*3+2];
-  const cx = verts[c*3], cy = verts[c*3+1], cz = verts[c*3+2];
-  if(triangleArea3(ax,ay,az,bx,by,bz,cx,cy,cz) > eps){
-    idx.push(a,b,c);
-  }
-}
-
-function cleanPathPoints(pts){
-  if(!pts || pts.length < 2) return [];
-
-  // Échantillonnage + suppression des points trop proches.
-  // Important pour éviter les boucles minuscules dans le tube.
-  const step = Math.max(1, Math.floor(pts.length / 260));
-  const sampled = pts.filter((_, i) => i % step === 0);
-  if(sampled[sampled.length - 1] !== pts[pts.length - 1]) sampled.push(pts[pts.length - 1]);
-
-  const minDist = Math.max(cfg.traceW * 0.75, 0.018);
-  const cleaned = [];
-
-  for(const p of sampled){
-    const last = cleaned[cleaned.length - 1];
-    if(!last || Math.hypot(p.x - last.x, p.z - last.z) >= minDist){
-      cleaned.push(p);
-    }
-  }
-
-  // Supprime les retours arrière quasi identiques qui créent des auto-croisements locaux.
-  const simplified = [];
-  for(const p of cleaned){
-    const n = simplified.length;
-    if(n >= 2){
-      const a = simplified[n - 2];
-      if(Math.hypot(p.x - a.x, p.z - a.z) < minDist * 0.6){
-        simplified.pop();
-        continue;
-      }
-    }
-    simplified.push(p);
-  }
-
-  if(simplified.length < 2 && sampled.length >= 2){
-    return [sampled[0], sampled[sampled.length - 1]];
-  }
-
-  return simplified;
-}
-
-function createRaisedPathGeometry(elevH){
+  function createRaisedPathGeometry(elevH){
   if(!normalizedPath || normalizedPath.length < 2){
     return new THREE.BufferGeometry();
   }
 
-  // Chemin GPX en tube elliptique fermé :
-  // - largeur = cfg.traceW
-  // - hauteur = cfg.traceH
-  // - bas du tracé légèrement dans le relief pour éviter les micro-espaces
-  const rx = Math.max(0.006, cfg.traceW / 2);
-  const ry = Math.max(0.004, cfg.traceH / 2);
-  const embed = Math.min(0.004, ry * 0.18);
-  const radialSegments = 12;
-
-  const rawPts = normalizedPath.map(p => {
+  const pts = normalizedPath.map(p => {
     const x = (p.nx - 0.5) * SIZE;
     const z = (0.5 - p.ny) * SIZE;
     const ground = sampleH(p.nx, p.ny) * elevH;
 
-    return new THREE.Vector3(
+    return {
       x,
-      ground + ry - embed, // bas ≈ ground - embed, haut ≈ ground + cfg.traceH - embed
-      z
-    );
+      z,
+      bottom: ground - 0.01,
+      top: ground + cfg.traceH
+    };
   });
 
-  const pts = cleanPathPoints(rawPts);
-  if(pts.length < 2) return new THREE.BufferGeometry();
+  const step = Math.max(1, Math.floor(pts.length / 500));
+  const reduced = pts.filter((_, i) => i % step === 0);
+
+  if(reduced[reduced.length - 1] !== pts[pts.length - 1]){
+    reduced.push(pts[pts.length - 1]);
+  }
 
   const verts = [];
   const idx = [];
+  const halfW = cfg.traceW / 2;
 
-  function ringNormal(i){
-    const prev = pts[Math.max(0, i - 1)];
-    const next = pts[Math.min(pts.length - 1, i + 1)];
-    let tx = next.x - prev.x;
-    let tz = next.z - prev.z;
-    const len = Math.hypot(tx, tz) || 1;
-    tx /= len;
-    tz /= len;
+  for(let i = 0; i < reduced.length; i++){
+    const p = reduced[i];
+    const prev = reduced[Math.max(0, i - 1)];
+    const next = reduced[Math.min(reduced.length - 1, i + 1)];
 
-    // normale horizontale au chemin
-    return { x: -tz, z: tx };
+    const dx = next.x - prev.x;
+    const dz = next.z - prev.z;
+    const len = Math.hypot(dx, dz) || 1;
+
+    const nx = -dz / len;
+    const nz = dx / len;
+
+    verts.push(
+      p.x + nx * halfW, p.bottom, p.z + nz * halfW,
+      p.x - nx * halfW, p.bottom, p.z - nz * halfW,
+      p.x + nx * halfW, p.top,    p.z + nz * halfW,
+      p.x - nx * halfW, p.top,    p.z - nz * halfW
+    );
   }
 
-  // Anneaux elliptiques fermés
-  for(let i = 0; i < pts.length; i++){
-    const p = pts[i];
-    const n = ringNormal(i);
+  for(let i = 0; i < reduced.length - 1; i++){
+    const a = i * 4;
+    const b = (i + 1) * 4;
 
-    for(let j = 0; j < radialSegments; j++){
-      const a = 2 * Math.PI * j / radialSegments;
-      const ca = Math.cos(a);
-      const sa = Math.sin(a);
+    // dessus
+    idx.push(a+2, b+2, a+3, a+3, b+2, b+3);
 
-      verts.push(
-        p.x + n.x * ca * rx,
-        p.y + sa * ry,
-        p.z + n.z * ca * rx
-      );
-    }
+    // côté gauche
+    idx.push(a+0, a+2, b+0, b+0, a+2, b+2);
+
+    // côté droit
+    idx.push(a+1, b+1, a+3, a+3, b+1, b+3);
+
+    // dessous
+    idx.push(a+0, b+0, a+1, a+1, b+0, b+1);
   }
 
-  // Faces latérales
-  for(let i = 0; i < pts.length - 1; i++){
-    const a0 = i * radialSegments;
-    const b0 = (i + 1) * radialSegments;
+  // bouchon début
+  idx.push(0, 1, 2, 2, 1, 3);
 
-    for(let j = 0; j < radialSegments; j++){
-      const j2 = (j + 1) % radialSegments;
-      const a = a0 + j;
-      const b = a0 + j2;
-      const c = b0 + j;
-      const d = b0 + j2;
-
-      pushTriClean(idx, verts, a, c, b);
-      pushTriClean(idx, verts, b, c, d);
-    }
-  }
-
-  // Bouchon début
-  const startCenter = verts.length / 3;
-  verts.push(pts[0].x, pts[0].y, pts[0].z);
-  for(let j = 0; j < radialSegments; j++){
-    const j2 = (j + 1) % radialSegments;
-    pushTriClean(idx, verts, startCenter, j2, j);
-  }
-
-  // Bouchon fin
-  const endCenter = verts.length / 3;
-  const lastBase = (pts.length - 1) * radialSegments;
-  const last = pts[pts.length - 1];
-  verts.push(last.x, last.y, last.z);
-  for(let j = 0; j < radialSegments; j++){
-    const j2 = (j + 1) % radialSegments;
-    pushTriClean(idx, verts, endCenter, lastBase + j, lastBase + j2);
-  }
+  // bouchon fin
+  const e = (reduced.length - 1) * 4;
+  idx.push(e+0, e+2, e+1, e+1, e+2, e+3);
 
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
-  g.computeBoundingSphere();
 
-  return cleanIndexedGeometry(g);
-}
-
-function cleanIndexedGeometry(geo){
-  const pos = geo.attributes.position;
-  const ix = geo.index;
-  const verts = [];
-  const oldToNew = [];
-  const map = new Map();
-
-  for(let i = 0; i < pos.count; i++){
-    const x = +pos.getX(i).toFixed(6);
-    const y = +pos.getY(i).toFixed(6);
-    const z = +pos.getZ(i).toFixed(6);
-    const key = `${x}|${y}|${z}`;
-    if(map.has(key)){
-      oldToNew[i] = map.get(key);
-    } else {
-      oldToNew[i] = verts.length / 3;
-      map.set(key, oldToNew[i]);
-      verts.push(x,y,z);
-    }
-  }
-
-  const idx = [];
-  const seen = new Set();
-
-  function add(a,b,c){
-    a = oldToNew[a]; b = oldToNew[b]; c = oldToNew[c];
-    if(a === b || b === c || a === c) return;
-    const ax=verts[a*3], ay=verts[a*3+1], az=verts[a*3+2];
-    const bx=verts[b*3], by=verts[b*3+1], bz=verts[b*3+2];
-    const cx=verts[c*3], cy=verts[c*3+1], cz=verts[c*3+2];
-    if(triangleArea3(ax,ay,az,bx,by,bz,cx,cy,cz) < 1e-7) return;
-    const key = [a,b,c].slice().sort((u,v)=>u-v).join('|');
-    if(seen.has(key)) return;
-    seen.add(key);
-    idx.push(a,b,c);
-  }
-
-  if(ix){
-    for(let i = 0; i < ix.count; i += 3) add(ix.getX(i), ix.getX(i+1), ix.getX(i+2));
-  } else {
-    for(let i = 0; i < pos.count; i += 3) add(i, i+1, i+2);
-  }
-
-  geo.dispose();
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  g.computeBoundingSphere();
   return g;
 }
 
@@ -1371,225 +1235,46 @@ return g;
   geo.dispose();
   return tris;
 }
-function xmlEscape(v){
-  return String(v)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function geometryTo3MFMesh(geo, scale){
-  const pos = geo.attributes.position;
-  const ix = geo.index;
-
-  // Soudure des sommets identiques à la précision 3MF.
-  // Cela évite que le slicer voie des arêtes ouvertes entre deux faces visuellement collées.
-  const vertices = [];
-  const remap = new Map();
-  const oldToNew = [];
-
-  for(let i = 0; i < pos.count; i++){
-    const x = +(pos.getX(i) * scale).toFixed(5);
-    const y = +(pos.getY(i) * scale).toFixed(5);
-    const z = +(pos.getZ(i) * scale).toFixed(5);
-    const key = `${x}|${y}|${z}`;
-
-    if(remap.has(key)){
-      oldToNew[i] = remap.get(key);
-    } else {
-      const ni = vertices.length;
-      remap.set(key, ni);
-      oldToNew[i] = ni;
-      vertices.push({x,y,z});
-    }
-  }
-
-  const triangles = [];
-  const seen = new Set();
-
-  function addTri(a,b,c){
-    a = oldToNew[a]; b = oldToNew[b]; c = oldToNew[c];
-    if(a === b || b === c || a === c) return;
-
-    const A = vertices[a], B = vertices[b], C = vertices[c];
-    const area = triangleArea3(A.x,A.y,A.z,B.x,B.y,B.z,C.x,C.y,C.z);
-    if(area < 1e-6) return;
-
-    const key = [a,b,c].slice().sort((u,v)=>u-v).join('|');
-    if(seen.has(key)) return;
-    seen.add(key);
-    triangles.push([a,b,c]);
-  }
-
-  if(ix){
-    for(let i = 0; i < ix.count; i += 3){
-      addTri(ix.getX(i), ix.getX(i + 1), ix.getX(i + 2));
-    }
-  } else {
-    for(let i = 0; i < pos.count; i += 3){
-      addTri(i, i + 1, i + 2);
-    }
-  }
-
-  geo.dispose();
-  return { vertices, triangles };
-}
-
-function build3MFModel(meshes){
-  const vertexXml = mesh => mesh.vertices
-    .map(v => `<vertex x="${v.x}" y="${v.y}" z="${v.z}"/>`)
-    .join('');
-
-  const triangleXml = mesh => mesh.triangles
-    .map(t => `<triangle v1="${t[0]}" v2="${t[1]}" v3="${t[2]}"/>`)
-    .join('');
-
-  const objectsXml = meshes.map(mesh => `
-    <object id="${mesh.id}" type="model" name="${xmlEscape(mesh.name)}">
-      <mesh>
-        <vertices>${vertexXml(mesh)}</vertices>
-        <triangles>${triangleXml(mesh)}</triangles>
-      </mesh>
-    </object>`).join('');
-
-  const itemsXml = meshes
-    .map(mesh => `<item objectid="${mesh.id}"/>`)
-    .join('');
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<model unit="millimeter" xml:lang="fr-FR" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
-  <metadata name="Application">Relief3D</metadata>
-  <metadata name="Title">${xmlEscape(cfg.txt1 || 'Relief3D')}</metadata>
-  <resources>${objectsXml}
-  </resources>
-  <build>${itemsXml}</build>
-</model>`;
-}
-
-function crc32(str){
-  const table = crc32.table || (crc32.table = (() => {
-    const t = new Uint32Array(256);
-    for(let i = 0; i < 256; i++){
-      let c = i;
-      for(let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
-      t[i] = c >>> 0;
-    }
-    return t;
-  })());
-
-  const bytes = new TextEncoder().encode(str);
-  let c = 0xffffffff;
-  for(const b of bytes) c = table[(c ^ b) & 0xff] ^ (c >>> 8);
-  return { crc: (c ^ 0xffffffff) >>> 0, bytes };
-}
-
-function makeZipStore(files){
-  const parts = [];
-  const central = [];
-  let offset = 0;
-
-  const u16 = v => new Uint8Array([v & 255, (v >>> 8) & 255]);
-  const u32 = v => new Uint8Array([v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]);
-
-  for(const file of files){
-    const nameBytes = new TextEncoder().encode(file.name);
-    const {crc, bytes} = crc32(file.content);
-    const size = bytes.length;
-
-    const local = new Uint8Array([
-      ...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
-      ...u32(crc), ...u32(size), ...u32(size), ...u16(nameBytes.length), ...u16(0)
-    ]);
-
-    parts.push(local, nameBytes, bytes);
-
-    const centralHeader = new Uint8Array([
-      ...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
-      ...u32(crc), ...u32(size), ...u32(size), ...u16(nameBytes.length), ...u16(0), ...u16(0),
-      ...u16(0), ...u16(0), ...u32(0), ...u32(offset)
-    ]);
-    central.push(centralHeader, nameBytes);
-
-    offset += local.length + nameBytes.length + bytes.length;
-  }
-
-  const centralSize = central.reduce((sum, p) => sum + p.length, 0);
-  const centralOffset = offset;
-  const end = new Uint8Array([
-    ...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length),
-    ...u32(centralSize), ...u32(centralOffset), ...u16(0)
-  ]);
-
-  return new Blob([...parts, ...central, end], {type:'model/3mf'});
-}
-
-function download3MF(filename, modelXml){
-  const contentTypes = `<?xml version="1.0" encoding="UTF-8"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
-</Types>`;
-
-  const rels = `<?xml version="1.0" encoding="UTF-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
-</Relationships>`;
-
-  const blob = makeZipStore([
-    {name:'[Content_Types].xml', content:contentTypes},
-    {name:'_rels/.rels', content:rels},
-    {name:'3D/3dmodel.model', content:modelXml}
-  ]);
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function export3MF(){
+function exportSTL(){
   if(!heightmapCache){
     alert('Charge d\'abord un fichier GPX.');
     return;
   }
 
-  setStatus('Génération du fichier 3MF…');
+  setStatus('Génération des STL terrain + GPX…');
 
   const elevH = 1.8 * (cfg.elevScale / 4);
   const baseY = -cfg.baseThick;
   const hm = heightmapCache.heights;
-  const scale = currentSizeMm / SIZE;
 
-  const safeName = (cfg.txt1 || 'relief3d')
+  const safeName = cfg.txt1
     .replace(/\s+/g, '-')
     .replace(/[^\w\-]/g, '')
     .toLowerCase();
 
-  const meshes = [];
-
+  // 1. STL terrain seul
   const terrainGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
-  meshes.push({
-    id: 1,
-    name: 'Terrain relief',
-    ...geometryTo3MFMesh(terrainGeo, scale)
-  });
+  const terrainTris = collectTrianglesFromGeometry(terrainGeo);
 
+  downloadSTLFromTriangles(
+    terrainTris,
+    `terrain-${safeName}-${currentSizeMm}mm.stl`
+  );
+
+  // 2. STL tracé GPX seul
   if(normalizedPath && normalizedPath.length > 1){
     const traceGeo = createRaisedPathGeometry(elevH);
-    meshes.push({
-      id: 2,
-      name: 'Trace GPX',
-      ...geometryTo3MFMesh(traceGeo, scale)
-    });
+    const traceTris = collectTrianglesFromGeometry(traceGeo);
+
+    setTimeout(() => {
+      downloadSTLFromTriangles(
+        traceTris,
+        `trace-gpx-${safeName}-${currentSizeMm}mm.stl`
+      );
+    }, 300);
   }
 
-  const modelXml = build3MFModel(meshes);
-  download3MF(`relief3d-${safeName}-${currentSizeMm}mm.3mf`, modelXml);
-  setStatus('✓ 3MF exporté : terrain + tracé GPX elliptique fermé');
+  setStatus('✓ STL terrain + tracé GPX exportés séparément');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1773,7 +1458,7 @@ $('loadBtn').addEventListener('click', async function(){
   }
 });
 
-$('stlBtn').addEventListener('click', export3MF);
+$('stlBtn').addEventListener('click', exportSTL);
 
 $('orderBtn').addEventListener('click',()=>{
   if(!heightmapCache){ alert('Charge d\'abord un GPX.'); return; }
