@@ -237,6 +237,30 @@
     .size-opt:hover:not(.active){background:var(--bg3)}
     .size-opt strong{display:block;font-size:13px;font-weight:600;margin-bottom:1px}
 
+
+
+    /* Surface terrain */
+    .surface-control{
+      display:grid;grid-template-columns:36px 1fr 36px;align-items:center;gap:6px;
+      margin-bottom:6px;
+    }
+    .surface-btn{
+      height:30px;border:1px solid var(--line);border-radius:var(--r);
+      background:var(--bg2);color:var(--ink);font-family:var(--mono);
+      font-size:18px;line-height:1;cursor:pointer;transition:.12s;
+    }
+    .surface-btn:hover{background:var(--bg3)}
+    .surface-value{
+      text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink2);
+      background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+      padding:8px 6px;
+    }
+    .reload-note{
+      display:none;font-family:var(--mono);font-size:9px;color:#7a5c00;
+      line-height:1.6;padding:7px 9px;background:#fff8e1;
+      border:1px solid #ffe082;border-radius:var(--r);margin-top:7px;
+    }
+
     @media(max-width:900px){
       #app{grid-template-columns:1fr;height:auto;overflow:auto}
       #viewer{height:65vw;min-height:320px}
@@ -315,9 +339,26 @@
       </div>
     </div>
 
-    <!-- 3 · Palette -->
+    <!-- 3 · Surface terrain -->
     <div class="section">
-      <div class="stitle"><span class="num">3</span>Palette terrain</div>
+      <div class="stitle"><span class="num">3</span>Surface 3D</div>
+      <div class="surface-control">
+        <button class="surface-btn" id="surfaceMinus" type="button">−</button>
+        <div class="surface-value" id="surfaceVal">Marge 20%</div>
+        <button class="surface-btn" id="surfacePlus" type="button">+</button>
+      </div>
+      <input type="range" id="surfaceMargin" min="0.05" max="0.60" step="0.05" value="0.20">
+      <div class="reload-note" id="reloadNote">
+        Paramètre modifié : clique sur <b>Charger le terrain</b> pour recalculer le relief avec la nouvelle surface.
+      </div>
+      <div class="note">
+        Augmente ou réduit la zone autour du tracé GPX. Plus la marge est grande, plus le modèle montre de terrain autour de la course.
+      </div>
+    </div>
+
+    <!-- 4 · Palette -->
+    <div class="section">
+      <div class="stitle"><span class="num">4</span>Palette terrain</div>
       <div class="clabel">Ambiance</div>
       <div class="pgrid" id="pgrid">
         <div class="popt active" data-p="glacier" title="Glacier" style="background:linear-gradient(180deg,#ffffff 0%,#7aaccc 50%,#3a6a85 100%)">Glacier</div>
@@ -328,9 +369,9 @@
       </div>
     </div>
 
-    <!-- 4 · Tracé -->
+    <!-- 5 · Tracé -->
     <div class="section">
-      <div class="stitle"><span class="num">4</span>Tracé GPX</div>
+      <div class="stitle"><span class="num">5</span>Tracé GPX</div>
       <div class="row">
         <label>Largeur</label>
         <input type="range" id="traceW" min="0.02" max="0.30" step="0.005" value="0.07">
@@ -354,17 +395,17 @@
       </div>
     </div>
 
-    <!-- 5 · Plaque -->
+    <!-- 6 · Plaque -->
     <div class="section">
-      <div class="stitle"><span class="num">5</span>Plaque gravée</div>
+      <div class="stitle"><span class="num">6</span>Plaque gravée</div>
       <input type="text" id="txt1" value="Patrouille des Glaciers" placeholder="Ligne 1 — Nom de la course">
       <input type="text" id="txt2" value="57.5 km · 4380 m D+" placeholder="Ligne 2 — Stats">
       <input type="text" id="txt3" value="" placeholder="Ligne 3 — Noms / Date (optionnel)">
     </div>
 
-    <!-- 6 · Taille -->
+    <!-- 7 · Taille -->
     <div class="section">
-      <div class="stitle"><span class="num">6</span>Taille du modèle</div>
+      <div class="stitle"><span class="num">7</span>Taille du modèle</div>
       <div class="size-grid" id="sizeGrid">
         <div class="size-opt" data-mm="100"><strong>10 cm</strong>100×100 mm</div>
         <div class="size-opt active" data-mm="150"><strong>15 cm</strong>150×150 mm</div>
@@ -373,9 +414,9 @@
       </div>
     </div>
 
-    <!-- 7 · Export -->
+    <!-- 8 · Export -->
     <div class="section">
-      <div class="stitle"><span class="num">7</span>Export &amp; Commande</div>
+      <div class="stitle"><span class="num">8</span>Export &amp; Commande</div>
      <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger Terrain + GPX</button>
       <button class="btn btn-green" id="orderBtn" disabled>Commander →</button>
       <div class="note" style="margin-top:8px">
@@ -1266,6 +1307,31 @@ bindCam('zoom', 'zoom', v=>v.toFixed(2)+'×');
 bindCam('rotH', 'rotH', v=>v+'°');
 bindCam('rotV', 'rotV', v=>v+'°');
 
+
+// Surface 3D autour du tracé : ce paramètre modifie la bbox,
+// donc il faut recharger pour refaire l'appel DEM et recalculer le relief.
+function updateSurfaceUI(){
+  const pct = Math.round(cfg.margin * 100);
+  $('surfaceVal').textContent = `Marge ${pct}%`;
+  $('surfaceMargin').value = cfg.margin.toFixed(2);
+}
+
+function setSurfaceMargin(v){
+  cfg.margin = clamp(v, 0.05, 0.60);
+  updateSurfaceUI();
+
+  if(gpxPoints || pendingGPX){
+    $('reloadNote').style.display = 'block';
+    $('loadBtn').disabled = false;
+    setStatus('Surface modifiée → recharge le terrain pour recalculer le relief');
+  }
+}
+
+$('surfaceMinus').addEventListener('click',()=>setSurfaceMargin(cfg.margin - 0.05));
+$('surfacePlus').addEventListener('click',()=>setSurfaceMargin(cfg.margin + 0.05));
+$('surfaceMargin').addEventListener('input',e=>setSurfaceMargin(parseFloat(e.target.value)));
+updateSurfaceUI();
+
 // Couleur tracé
 $('cgrid').querySelectorAll('.copt').forEach(el=>el.addEventListener('click',()=>{
   $('cgrid').querySelectorAll('.copt').forEach(e=>e.classList.remove('active'));
@@ -1338,6 +1404,7 @@ $('loadBtn').addEventListener('click', async function(){
   $('stlBtn').disabled=true; $('orderBtn').disabled=true;
   $('statsOverlay').style.display='none';
   const badge=$('terrainBadge'); badge.style.display='none';
+  $('reloadNote').style.display='none';
 
   try {
     setStatus('Parsing GPX…');
@@ -1412,6 +1479,7 @@ $('orderBtn').addEventListener('click',()=>{
     `D-           : ${s.dMinus} m`,
     '',
     `Taille       : ${currentSizeMm} × ${currentSizeMm} mm`,
+    `Surface 3D   : marge ${Math.round(cfg.margin*100)}%`,
     `Élévation ×  : ${cfg.elevScale}`,
     `Base         : ${cfg.baseThick} u`,
     `Palette      : ${currentPalette}`,
