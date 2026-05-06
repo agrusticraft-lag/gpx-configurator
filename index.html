@@ -1790,36 +1790,7 @@ $('orderBtn').addEventListener('click', async ()=>{
   }
 
 });
-  if(!heightmapCache){ alert('Charge d\'abord un GPX.'); return; }
-  const s=gpxStats(gpxPoints||[]);
-  const summary=[
-    '╔══════════════════════════════╗',
-    '║    RÉSUMÉ COMMANDE RELIEF3D   ║',
-    '╚══════════════════════════════╝',
-    '',
-    `Fichier      : ${pendingName}`,
-    `Source élév. : ${heightmapCache.mode}`,
-    `Altitude     : ${heightmapCache.minEle.toFixed(0)} – ${heightmapCache.maxEle.toFixed(0)} m`,
-    `Bbox         : ${gpxBBox.minLat.toFixed(4)}°N  ${gpxBBox.minLon.toFixed(4)}°E`,
-    `               → ${gpxBBox.maxLat.toFixed(4)}°N  ${gpxBBox.maxLon.toFixed(4)}°E`,
-    '',
-    `Distance     : ${s.distKm.toFixed(1)} km`,
-    `D+           : ${s.dPlus} m`,
-    `D-           : ${s.dMinus} m`,
-    '',
-    `Taille       : ${currentSizeMm} × ${currentSizeMm} mm`,
-    `Surface 3D   : marge ${Math.round(cfg.margin*100)}%`,
-    `Élévation ×  : ${cfg.elevScale}`,
-    `Base         : ${cfg.baseThick} u`,
-    `Palette      : ${currentPalette}`,
-    `Tracé        : W${cfg.traceW.toFixed(3)}  H${cfg.traceH.toFixed(3)}  ${cfg.traceColor}`,
-    '',
-    `Plaque L1    : "${cfg.txt1}"`,
-    `Plaque L2    : "${cfg.txt2}"`,
-    `Plaque L3    : "${cfg.txt3}"`,
-  ].join('\n');
-  alert(summary);
-});
+
 
 window.addEventListener('resize',()=>{
   if(!renderer||!camera) return;
