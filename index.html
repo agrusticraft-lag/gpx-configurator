@@ -1770,17 +1770,10 @@ $('orderBtn').addEventListener('click', async ()=>{
 
   try {
 
-    await fetch('https://agrusti-craft.myshopify.com/cart/add.js', {
-      method: 'POST',
-      headers: {
-        'Content-Type':'application/json'
-      },
-      body: JSON.stringify({
-        items:[item]
-      })
-    });
-
-   window.top.location.href = 'https://agrusti-craft.myshopify.com/cart';
+   window.parent.postMessage({
+  type: 'ADD_RELIEF3D_TO_CART',
+  item: item
+}, '*');
 
   } catch(err){
 
