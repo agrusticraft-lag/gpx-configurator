@@ -1737,7 +1737,59 @@ $('loadBtn').addEventListener('click', async function(){
 
 $('stlBtn').addEventListener('click', exportSTL);
 
-$('orderBtn').addEventListener('click',()=>{
+$('orderBtn').addEventListener('click', async ()=>{
+
+  if(!heightmapCache){
+    alert('Charge d’abord un GPX.');
+    return;
+  }
+
+  const s = gpxStats(gpxPoints || []);
+
+  const item = {
+    id: 53839425077589,
+    quantity: 1,
+
+    properties: {
+      "Course": cfg.txt1,
+      "Distance": `${s.distKm.toFixed(1)} km`,
+      "D+": `${s.dPlus} m`,
+      "D-": `${s.dMinus} m`,
+      "Taille": `${currentSizeMm} mm`,
+      "Palette": currentPalette,
+      "Couleur tracé": cfg.traceColor,
+      "Élévation": cfg.elevScale,
+      "Marge terrain": `${Math.round(cfg.margin*100)}%`,
+      "Altitude min": `${heightmapCache.minEle.toFixed(0)} m`,
+      "Altitude max": `${heightmapCache.maxEle.toFixed(0)} m`,
+      "Source DEM": heightmapCache.mode,
+      "Texte plaque": cfg.txt2,
+      "Texte supplémentaire": cfg.txt3
+    }
+  };
+
+  try {
+
+    await fetch('/cart/add.js', {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json'
+      },
+      body: JSON.stringify({
+        items:[item]
+      })
+    });
+
+    window.top.location.href = '/cart';
+
+  } catch(err){
+
+    console.error(err);
+    alert('Erreur ajout panier.');
+
+  }
+
+});
   if(!heightmapCache){ alert('Charge d\'abord un GPX.'); return; }
   const s=gpxStats(gpxPoints||[]);
   const summary=[
