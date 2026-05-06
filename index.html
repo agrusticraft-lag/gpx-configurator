@@ -1770,7 +1770,7 @@ $('orderBtn').addEventListener('click', async ()=>{
 
   try {
 
-    await fetch('/cart/add.js', {
+    await fetch('https://agrusti-craft.myshopify.com/cart/add.js', {
       method: 'POST',
       headers: {
         'Content-Type':'application/json'
@@ -1780,7 +1780,7 @@ $('orderBtn').addEventListener('click', async ()=>{
       })
     });
 
-    window.top.location.href = '/cart';
+   window.top.location.href = 'https://agrusti-craft.myshopify.com/cart';
 
   } catch(err){
 
