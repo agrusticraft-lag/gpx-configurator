@@ -589,7 +589,7 @@ function smoothGrid(g, passes=2){
   return cur;
 }
 
-const OPENTOPO_API_KEY = "889e4a1067a0652b4010aa80dbf7e18d";
+//const OPENTOPO_API_KEY = "889e4a1067a0652b4010aa80dbf7e18d";
 const DEM_TYPE = "COP30"; // meilleur choix montagne, sinon "SRTMGL1"
 // ══════════════════════════════════════════════════════════════
 //  OPENTOPODATA — Terrain réel SRTM GL3
@@ -601,14 +601,21 @@ async function loadHeightmap(bbox){
   setProgress(10, 'Requête OpenTopography…');
 
   const url =
-    `https://portal.opentopography.org/API/globaldem` +
-    `?demtype=${DEM_TYPE}` +
-    `&south=${bbox.minLat}` +
-    `&north=${bbox.maxLat}` +
-    `&west=${bbox.minLon}` +
-    `&east=${bbox.maxLon}` +
-    `&outputFormat=AAIGrid` +
-    `&API_Key=${OPENTOPO_API_KEY}`;
+  `/api/dem` +
+  `?demtype=${DEM_TYPE}` +
+  `&south=${bbox.minLat}` +
+  `&north=${bbox.maxLat}` +
+  `&west=${bbox.minLon}` +
+  `&east=${bbox.maxLon}`;
+ // const url =
+ //   `https://portal.opentopography.org/API/globaldem` +
+  //  `?demtype=${DEM_TYPE}` +
+    //`&south=${bbox.minLat}` +
+    //`&north=${bbox.maxLat}` +
+    //`&west=${bbox.minLon}` +
+    //`&east=${bbox.maxLon}` +
+    //`&outputFormat=AAIGrid` +
+    //`&API_Key=${OPENTOPO_API_KEY}`;
 
   const resp = await fetch(url);
 
