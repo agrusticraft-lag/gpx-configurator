@@ -22,7 +22,13 @@
       --display: 'Bebas Neue', sans-serif;
     } 
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;overflow:hidden}
+  body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+  overflow:auto;
+}
    
     /* ── Header ── */
     #header{
@@ -50,12 +56,12 @@
   window.uploadVercelBlob = upload;
 </script>
     /* ── Layout ── */
-    #app{
-      display:grid;
-      grid-template-columns:1fr 340px;
-      height:calc(100vh - 52px);
-      margin-top:52px;
-    }
+#app{
+  display:grid;
+  grid-template-columns:1fr 340px;
+  min-height:calc(100vh - 52px);
+  margin-top:52px;
+}
 
     /* ── Viewer ── */
     #viewer{
