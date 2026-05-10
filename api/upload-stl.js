@@ -1,5 +1,4 @@
-
-import { put } from '@vercel/blob';
+import { handleUpload } from '@vercel/blob/client';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,30 +6,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    const chunks = [];
+    const body = req.body;
 
-    for await (const chunk of req) {
-      chunks.push(chunk);
-    }
-
-    const buffer = Buffer.concat(chunks);
-
-    const filename = `relief3d-${Date.now()}.stl`;
-
-    const blob = await put(filename, buffer, {
-      access: 'public',
-      contentType: 'model/stl'
+    const jsonResponse = await handleUpload({
+      body,
+      request: req,
+      onBeforeGenerateToken: async (pathname) => {
+        return {
+          allowedContentTypes: [
+            'application/octet-stream',
+            'application/sla',
+            'model/stl'
+          ],
+          tokenPayload: JSON.stringify({
+            pathname
+          })
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        console.log('STL upload terminé:', blob.url, tokenPayload);
+      }
     });
 
-    return res.status(200).json({
-      url: blob.url
-    });
+    return res.status(200).json(jsonResponse);
 
   } catch (error) {
-    console.error('Erreur upload STL:', error);
-
+    console.error('Erreur handleUpload STL:', error);
     return res.status(500).json({
-      error: 'Erreur upload STL'
+      error: error.message || 'Erreur upload STL'
     });
   }
 }
