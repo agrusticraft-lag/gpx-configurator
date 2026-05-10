@@ -1487,17 +1487,9 @@ function downloadSTLFromTriangles(tris, filename){
 
   URL.revokeObjectURL(url);
 }
+import { upload } from '@vercel/blob/client';
+
 async function uploadSTLToVercel(stlBlob, filename){
-  let upload;
-
-  try {
-    const module = await import('https://esm.sh/@vercel/blob@latest/client');
-    upload = module.upload;
-  } catch(err) {
-    console.error('Impossible de charger le client Vercel Blob:', err);
-    throw new Error('Client Vercel Blob non chargé');
-  }
-
   const blob = await upload(filename, stlBlob, {
     access: 'public',
     handleUploadUrl: '/api/upload-stl',
