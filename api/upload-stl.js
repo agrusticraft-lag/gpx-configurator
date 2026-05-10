@@ -6,11 +6,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = req.body;
-
     const jsonResponse = await handleUpload({
-      body,
+      body: req.body,
       request: req,
+
       onBeforeGenerateToken: async (pathname) => {
         return {
           allowedContentTypes: [
@@ -18,13 +17,12 @@ export default async function handler(req, res) {
             'application/sla',
             'model/stl'
           ],
-          tokenPayload: JSON.stringify({
-            pathname
-          })
+          tokenPayload: JSON.stringify({ pathname })
         };
       },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        console.log('STL upload terminé:', blob.url, tokenPayload);
+
+      onUploadCompleted: async ({ blob }) => {
+        console.log('STL upload terminé:', blob.url);
       }
     });
 
