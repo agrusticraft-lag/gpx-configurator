@@ -1487,16 +1487,11 @@ function downloadSTLFromTriangles(tris, filename){
 
   URL.revokeObjectURL(url);
 }
-import { upload } from '@vercel/blob/client';
-
+  
 async function uploadSTLToVercel(stlBlob, filename){
-  const blob = await upload(filename, stlBlob, {
-    access: 'public',
-    handleUploadUrl: '/api/upload-stl',
-    contentType: 'application/octet-stream'
-  });
-
-  return blob.url;
+  throw new Error(
+    'Upload STL automatique temporairement désactivé. Le téléchargement local STL reste disponible.'
+  );
 }
 
 async function generateAndUploadOrderSTLs(){
