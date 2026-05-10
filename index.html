@@ -50,11 +50,7 @@
       padding:4px 10px;border-radius:2px;
     }
 
-    <script type="module">
-  import { upload } from 'https://esm.sh/@vercel/blob/client';
 
-  window.uploadVercelBlob = upload;
-</script>
     /* ── Layout ── */
 #app{
   display:grid;
@@ -1492,11 +1488,17 @@ function downloadSTLFromTriangles(tris, filename){
   URL.revokeObjectURL(url);
 }
 async function uploadSTLToVercel(stlBlob, filename){
-  if(!window.uploadVercelBlob){
+  let upload;
+
+  try {
+    const module = await import('https://esm.sh/@vercel/blob@latest/client');
+    upload = module.upload;
+  } catch(err) {
+    console.error('Impossible de charger le client Vercel Blob:', err);
     throw new Error('Client Vercel Blob non chargé');
   }
 
-  const blob = await window.uploadVercelBlob(filename, stlBlob, {
+  const blob = await upload(filename, stlBlob, {
     access: 'public',
     handleUploadUrl: '/api/upload-stl',
     contentType: 'application/octet-stream'
