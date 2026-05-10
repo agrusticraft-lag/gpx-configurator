@@ -1433,7 +1433,7 @@ g.normalizeNormals();
 g.computeBoundingSphere();
 return g;
 }
-  function downloadSTLFromTriangles(tris, filename){
+function createSTLBlobFromTriangles(tris, filename){
   const scale = currentSizeMm / SIZE;
 
   const buf = new ArrayBuffer(80 + 4 + tris.length * 50);
@@ -1465,7 +1465,12 @@ return g;
     off += 2;
   }
 
-  const blob = new Blob([buf], { type: 'application/octet-stream' });
+  return new Blob([buf], { type: 'application/octet-stream' });
+}
+
+  
+function downloadSTLFromTriangles(tris, filename){
+  const blob = createSTLBlobFromTriangles(tris, filename);
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement('a');
@@ -1475,6 +1480,61 @@ return g;
 
   URL.revokeObjectURL(url);
 }
+async function uploadSTLToVercel(stlBlob, filename){
+  const response = await fetch(`/api/upload-stl?filename=${encodeURIComponent(filename)}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/octet-stream'
+    },
+    body: stlBlob
+  });
+
+  if(!response.ok){
+    throw new Error('Erreur upload STL vers Vercel Blob');
+  }
+
+  const data = await response.json();
+  return data.url;
+}
+
+async function generateAndUploadOrderSTLs(){
+  if(!heightmapCache){
+    throw new Error('Charge d’abord un fichier GPX.');
+  }
+
+  const elevH = 1.8 * (cfg.elevScale / 4);
+  const baseY = -cfg.baseThick;
+  const hm = heightmapCache.heights;
+
+  const safeName = (cfg.txt1 || 'relief3d')
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]/g, '')
+    .toLowerCase();
+
+  const terrainFilename = `terrain-${safeName}-${currentSizeMm}mm.stl`;
+  const terrainGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
+  const terrainTris = collectTrianglesFromGeometry(terrainGeo);
+  const terrainBlob = createSTLBlobFromTriangles(terrainTris, terrainFilename);
+
+  const terrainUrl = await uploadSTLToVercel(terrainBlob, terrainFilename);
+
+  let traceUrl = '';
+
+  if(normalizedPath && normalizedPath.length > 1){
+    const traceFilename = `trace-gpx-${safeName}-${currentSizeMm}mm.stl`;
+    const traceGeo = createRaisedPathGeometry(elevH);
+    const traceTris = collectTrianglesFromGeometry(traceGeo);
+    const traceBlob = createSTLBlobFromTriangles(traceTris, traceFilename);
+
+    traceUrl = await uploadSTLToVercel(traceBlob, traceFilename);
+  }
+
+  return {
+    terrainUrl,
+    traceUrl
+  };
+}
+  
   function collectTrianglesFromGeometry(geo){
   const tris = [];
   const pos = geo.attributes.position;
@@ -1738,50 +1798,64 @@ $('loadBtn').addEventListener('click', async function(){
 $('stlBtn').addEventListener('click', exportSTL);
 
 $('orderBtn').addEventListener('click', async ()=>{
-
   if(!heightmapCache){
     alert('Charge d’abord un GPX.');
     return;
   }
 
-  const s = gpxStats(gpxPoints || []);
-
-  const item = {
-    id: 53839425077589,
-    quantity: 1,
-
-    properties: {
-      "Course": cfg.txt1,
-      "Distance": `${s.distKm.toFixed(1)} km`,
-      "D+": `${s.dPlus} m`,
-      "D-": `${s.dMinus} m`,
-      "Taille": `${currentSizeMm} mm`,
-      "Palette": currentPalette,
-      "Couleur tracé": cfg.traceColor,
-      "Élévation": cfg.elevScale,
-      "Marge terrain": `${Math.round(cfg.margin*100)}%`,
-      "Altitude min": `${heightmapCache.minEle.toFixed(0)} m`,
-      "Altitude max": `${heightmapCache.maxEle.toFixed(0)} m`,
-      "Source DEM": heightmapCache.mode,
-      "Texte plaque": cfg.txt2,
-      "Texte supplémentaire": cfg.txt3
-    }
-  };
+  const btn = $('orderBtn');
+  btn.disabled = true;
+  btn.textContent = 'Préparation STL…';
 
   try {
+    setStatus('Génération et upload des STL…');
 
-   window.parent.postMessage({
-  type: 'ADD_RELIEF3D_TO_CART',
-  item: item
-}, '*');
+    const stlFiles = await generateAndUploadOrderSTLs();
 
-  } catch(err){
+    const s = gpxStats(gpxPoints || []);
 
+    const item = {
+      id: 53839425077589,
+      quantity: 1,
+      properties: {
+        "Fichier GPX": pendingName,
+        "Course": cfg.txt1,
+        "Infos": cfg.txt2,
+        "Texte 3": cfg.txt3,
+        "Distance": `${s.distKm.toFixed(1)} km`,
+        "D+": `${s.dPlus} m`,
+        "D-": `${s.dMinus} m`,
+        "Taille": `${currentSizeMm} × ${currentSizeMm} mm`,
+        "Surface 3D": `marge ${Math.round(cfg.margin * 100)}%`,
+        "Élévation": `${cfg.elevScale}`,
+        "Base": `${cfg.baseThick}`,
+        "Palette": currentPalette,
+        "Couleur tracé": cfg.traceColor,
+        "Largeur tracé": cfg.traceW.toFixed(3),
+        "Hauteur tracé": cfg.traceH.toFixed(3),
+        "Altitude min": `${heightmapCache.minEle.toFixed(0)} m`,
+        "Altitude max": `${heightmapCache.maxEle.toFixed(0)} m`,
+        "Source élévation": heightmapCache.mode,
+        "STL terrain": stlFiles.terrainUrl,
+        "STL tracé GPX": stlFiles.traceUrl
+      }
+    };
+
+    window.parent.postMessage({
+      type: 'ADD_RELIEF3D_TO_CART',
+      item: item
+    }, '*');
+
+    setStatus('✓ STL uploadés, ajout au panier Shopify…');
+
+  } catch(err) {
     console.error(err);
-    alert('Erreur ajout panier.');
-
+    alert(err.message || 'Erreur pendant la préparation de la commande.');
+    setStatus('Erreur commande : ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Commander →';
   }
-
 });
 
 
