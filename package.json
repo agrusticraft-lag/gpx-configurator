@@ -12,5 +12,5 @@
     "@vercel/blob": "latest",
     "vite": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {} 
 }
