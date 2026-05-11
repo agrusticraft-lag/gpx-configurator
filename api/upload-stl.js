@@ -5,10 +5,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return res.status(500).json({
+      error: 'BLOB_READ_WRITE_TOKEN manquant dans Vercel Environment Variables'
+    });
+  }
+
   try {
     const jsonResponse = await handleUpload({
       body: req.body,
       request: req,
+
+      // Important : on force l’utilisation du bon token
+      token: process.env.BLOB_READ_WRITE_TOKEN,
 
       onBeforeGenerateToken: async (pathname) => {
         return {
