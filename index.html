@@ -1516,7 +1516,6 @@ async function uploadSTLToVercel(stlBlob, filename){
     access: 'public',
     handleUploadUrl: '/api/upload-stl',
     contentType: 'application/octet-stream',
-    multipart: true,
     onUploadProgress: ({ percentage }) => {
       setStatus(`Upload STL ${safeFilename}… ${Math.round(percentage)}%`);
     }
