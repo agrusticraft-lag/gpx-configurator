@@ -17,6 +17,7 @@ export default async function handler(req, res) {
             'application/sla',
             'model/stl'
           ],
+          maximumSizeInBytes: 200 * 1024 * 1024,
           addRandomSuffix: true,
           tokenPayload: JSON.stringify({
             pathname
