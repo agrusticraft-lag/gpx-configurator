@@ -274,6 +274,7 @@
       body{overflow:auto}
     }
   </style>
+   <script type="module" src="/src/blob-client.js"></script>
 </head>
 <body>
 
@@ -1488,10 +1489,40 @@ function downloadSTLFromTriangles(tris, filename){
   URL.revokeObjectURL(url);
 }
   
+async function waitForVercelBlobClient(){
+  const start = Date.now();
+
+  while(!window.uploadVercelBlob){
+    if(Date.now() - start > 8000){
+      throw new Error('Client Vercel Blob non chargé.');
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  return window.uploadVercelBlob;
+}
+
 async function uploadSTLToVercel(stlBlob, filename){
-  throw new Error(
-    'Upload STL automatique temporairement désactivé. Le téléchargement local STL reste disponible.'
-  );
+  const upload = await waitForVercelBlobClient();
+
+  const safeFilename = filename
+    .replace(/\s+/g, '-')
+    .replace(/[^\w.\-]/g, '')
+    .toLowerCase();
+
+  const pathname = `stl/${Date.now()}-${safeFilename}`;
+
+  const blob = await upload(pathname, stlBlob, {
+    access: 'public',
+    handleUploadUrl: '/api/upload-stl',
+    contentType: 'application/octet-stream',
+    multipart: true,
+    onUploadProgress: ({ percentage }) => {
+      setStatus(`Upload STL ${safeFilename}… ${Math.round(percentage)}%`);
+    }
+  });
+
+  return blob.url;
 }
 
 async function generateAndUploadOrderSTLs(){
