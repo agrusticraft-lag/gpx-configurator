@@ -1510,7 +1510,7 @@ async function uploadSTLToVercel(stlBlob, filename){
     .replace(/[^\w.\-]/g, '')
     .toLowerCase();
 
-  const pathname = `stl/${Date.now()}-${safeFilename}`;
+const pathname = `${Date.now()}-${safeFilename}`;
 
   const blob = await upload(pathname, stlBlob, {
     access: 'public',
