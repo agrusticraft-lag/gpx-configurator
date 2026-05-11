@@ -17,7 +17,7 @@ export default async function handler(req, res) {
             'application/sla',
             'model/stl'
           ],
-          maximumSizeInBytes: 200 * 1024 * 1024,
+          addRandomSuffix: true,
           tokenPayload: JSON.stringify({
             pathname
           })
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Erreur handleUpload STL:', error);
 
-    return res.status(500).json({
+    return res.status(400).json({
       error: error.message || 'Erreur upload STL'
     });
   }
