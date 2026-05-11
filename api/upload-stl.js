@@ -17,12 +17,15 @@ export default async function handler(req, res) {
             'application/sla',
             'model/stl'
           ],
-          tokenPayload: JSON.stringify({ pathname })
+          maximumSizeInBytes: 200 * 1024 * 1024,
+          tokenPayload: JSON.stringify({
+            pathname
+          })
         };
       },
 
-      onUploadCompleted: async ({ blob }) => {
-        console.log('STL upload terminé:', blob.url);
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        console.log('STL upload terminé:', blob.url, tokenPayload);
       }
     });
 
@@ -30,6 +33,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Erreur handleUpload STL:', error);
+
     return res.status(500).json({
       error: error.message || 'Erreur upload STL'
     });
