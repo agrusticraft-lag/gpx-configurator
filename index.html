@@ -301,11 +301,22 @@ body{
     /* Colors */
     .clabel{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
     .cgrid{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
-    .copt{
-      width:26px;height:26px;border-radius:3px;cursor:pointer;
-      border:2px solid transparent;transition:.12s;
-      display:flex;align-items:center;justify-content:center;
-    }
+.copt{
+  min-width:58px;
+  height:28px;
+  padding:0 6px;
+  border-radius:4px;
+  cursor:pointer;
+  border:2px solid transparent;
+  transition:.12s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:var(--mono);
+  font-size:8px;
+  color:white;
+  text-shadow:0 1px 2px rgba(0,0,0,.45);
+}
     .copt.active{border-color:var(--ink);transform:scale(1.1)}
     .copt:hover{transform:scale(1.08)}
 
@@ -506,15 +517,15 @@ body{
       </div>
       <div class="clabel" style="margin-top:4px">Couleur</div>
 <div class="cgrid" id="cgrid">
-  <div class="copt active" data-c="#aa5a19" style="background:#aa5a19" title="Bronze"></div>
-  <div class="copt" data-c="#bc9949" style="background:#bc9949" title="Doré"></div>
-  <div class="copt" data-c="#c30404" style="background:#c30404" title="Rouge"></div>
-  <div class="copt" data-c="#ff7300" style="background:#ff7300" title="Orange"></div>
-  <div class="copt" data-c="#1a9a00" style="background:#1a9a00" title="Vert"></div>
-  <div class="copt" data-c="#1075af" style="background:#1075af" title="Bleu"></div>
-  <div class="copt" data-c="#3f3f3f" style="background:#5f5f5f" title="Gris"></div>
-  <div class="copt" data-c="#8a8a8a" style="background:#fff;box-shadow:inset 0 0 0 1px #ccc" title="Blanc"></div>
-  <div class="copt" data-c="#111111" style="background:#111111" title="Noir"></div>
+  <div class="copt active" data-c="#aa5a19" style="background:#aa5a19" title="Bronze">Bronze</div>
+  <div class="copt" data-c="#bc9949" style="background:#bc9949" title="Or">Or</div>
+  <div class="copt" data-c="#c30404" style="background:#c30404" title="Rouge">Rouge</div>
+  <div class="copt" data-c="#ff7300" style="background:#ff7300" title="Orange">Orange</div>
+  <div class="copt" data-c="#1a9a00" style="background:#1a9a00" title="Vert">Vert</div>
+  <div class="copt" data-c="#1075af" style="background:#1075af" title="Bleu">Bleu</div>
+  <div class="copt" data-c="#5f5f5f" style="background:#5f5f5f" title="Gris">Gris</div>
+  <div class="copt" data-c="#ffffff" style="background:#fff;box-shadow:inset 0 0 0 1px #ccc;color:#111;text-shadow:none" title="Blanc">Blanc</div>
+  <div class="copt" data-c="#111111" style="background:#111111" title="Noir">Noir</div>
 </div>
     </div>
 
