@@ -22,12 +22,12 @@
       --display: 'Bebas Neue', sans-serif;
     } 
     *{box-sizing:border-box;margin:0;padding:0}
-  body{
+body{
   font-family:var(--sans);
   background:var(--bg);
   color:var(--ink);
-  min-height:100vh;
-  overflow:auto;
+  height:100vh;
+  overflow:hidden;
 }
 
     /* ── Header ── */
@@ -55,16 +55,18 @@
 #app{
   display:grid;
   grid-template-columns:1fr 340px;
-  min-height:calc(100vh - 52px);
+  height:calc(100vh - 52px);
   margin-top:52px;
+  overflow:hidden;
 }
 
     /* ── Viewer ── */
-    #viewer{
-      position:relative;
-      background:#1a1a17;
-      overflow:hidden;
-    }
+#viewer{
+  position:relative;
+  background:#1a1a17;
+  overflow:hidden;
+  height:100%;
+}
     #viewer canvas{display:block;width:100%;height:100%}
 
     /* Status pill */
@@ -107,12 +109,14 @@
 
 
     /* ── Sidebar ── */
-    #sidebar{
-      border-left:1px solid var(--line);
-      overflow-y:auto;
-      background:var(--bg);
-      display:flex;flex-direction:column;
-    }
+#sidebar{
+  border-left:1px solid var(--line);
+  overflow-y:auto;
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+  height:100%;
+}
     #sidebar::-webkit-scrollbar{width:4px}
     #sidebar::-webkit-scrollbar-track{background:var(--bg2)}
     #sidebar::-webkit-scrollbar-thumb{background:var(--bg3)}
