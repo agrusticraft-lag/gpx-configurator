@@ -1413,8 +1413,12 @@ function buildPath(elevH){
 
 pathObj = new THREE.Mesh(pathGeo, new THREE.MeshStandardMaterial({
   color: new THREE.Color(cfg.traceColor),
-  roughness: 0.80,
+  emissive: new THREE.Color(cfg.traceColor),
+  emissiveIntensity: 0.18,
+
+  roughness: 0.75,
   metalness: 0.0,
+
   transparent: false,
   opacity: 1.0,
   depthWrite: true,
