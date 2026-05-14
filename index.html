@@ -1718,6 +1718,31 @@ bindCam('zoom', 'zoom', v=>v.toFixed(2)+'×');
 bindCam('rotH', 'rotH', v=>v+'°');
 bindCam('rotV', 'rotV', v=>v+'°');
 
+  function syncViewSliders(){
+  $('zoom').value = cfg.zoom;
+  $('zoomVal').textContent = cfg.zoom.toFixed(2) + '×';
+
+  $('rotH').value = cfg.rotH;
+  $('rotHVal').textContent = Math.round(cfg.rotH) + '°';
+
+  $('rotV').value = cfg.rotV;
+  $('rotVVal').textContent = Math.round(cfg.rotV) + '°';
+}
+
+function changeView(key, delta, min, max){
+  cfg[key] = clamp(cfg[key] + delta, min, max);
+  syncViewSliders();
+  updateCamera();
+}
+
+$('zoomOut').addEventListener('click',()=>changeView('zoom', -0.08, 0.4, 2.5));
+$('zoomIn').addEventListener('click',()=>changeView('zoom', 0.08, 0.4, 2.5));
+
+$('rotLeft').addEventListener('click',()=>changeView('rotH', -10, -180, 180));
+$('rotRight').addEventListener('click',()=>changeView('rotH', 10, -180, 180));
+
+$('tiltDown').addEventListener('click',()=>changeView('rotV', -5, 5, 85));
+$('tiltUp').addEventListener('click',()=>changeView('rotV', 5, 5, 85));
 
 // Surface 3D autour du tracé : ce paramètre modifie la bbox,
 // donc il faut recharger pour refaire l'appel DEM et recalculer le relief.
