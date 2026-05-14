@@ -1411,22 +1411,16 @@ function buildPath(elevH){
 
   const pathGeo = createRaisedPathGeometry(elevH);
 
-pathObj = new THREE.Mesh(pathGeo, new THREE.MeshStandardMaterial({
-  color: new THREE.Color(cfg.traceColor),
-  emissive: new THREE.Color(cfg.traceColor),
-  emissiveIntensity: 0.18,
+  pathObj = new THREE.Mesh(pathGeo, new THREE.MeshBasicMaterial({
+    color: new THREE.Color(cfg.traceColor),
+    transparent: false,
+    opacity: 1.0,
+    depthWrite: true,
+    depthTest: true,
+    side: THREE.DoubleSide
+  }));
 
-  roughness: 0.75,
-  metalness: 0.0,
-
-  transparent: false,
-  opacity: 1.0,
-  depthWrite: true,
-  depthTest: true,
-  side: THREE.DoubleSide
-}));
-
-pathObj.renderOrder = 10;
+  pathObj.renderOrder = 10;
 
   scene.add(pathObj);
 }
