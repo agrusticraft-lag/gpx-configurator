@@ -29,7 +29,7 @@ body{
   height:100vh;
   overflow:hidden;
 }
-
+ 
     /* ── Header ── */
     #header{
       position:fixed;top:0;left:0;right:0;z-index:100;
@@ -485,7 +485,7 @@ body{
       <div class="stitle"><span class="num">4</span>Palette terrain</div>
       <div class="clabel">Couleur</div>
    <div class="pgrid" id="pgrid">
-  <div class="popt active" data-p="gris" title="Gris" style="background:#6f6f6f">Gris</div>
+  <div class="popt active" data-p="gris" title="Gris" style="background:#3f3f3f">Gris</div>
   <div class="popt" data-p="blanc" title="Blanc" style="background:#ffffff">Blanc</div>
   <div class="popt" data-p="noir" title="Noir" style="background:#2f2f2f;color:rgba(255,255,255,.65)">Noir</div>
 </div>
@@ -1858,13 +1858,13 @@ $('pgrid').querySelectorAll('.popt').forEach(el=>el.addEventListener('click',()=
   currentPalette = el.dataset.p;
 
   const terrainColors = {
-  gris:  '#6f6f6f',
+  gris:  '#3f3f3f',
   blanc: '#8c8c8c',
   noir:  '#111111'
 };
 
 
-  cfg.terrainColor = terrainColors[currentPalette] || '#6f6f6f';
+  cfg.terrainColor = terrainColors[currentPalette] || '#3f3f3f';
 
   if(heightmapCache) buildScene();
 }));
