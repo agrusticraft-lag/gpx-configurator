@@ -1414,7 +1414,7 @@ function buildPath(elevH){
   pathObj = new THREE.Mesh(pathGeo, new THREE.MeshStandardMaterial({
     color: new THREE.Color(cfg.traceColor),
     roughness: .95,
-    metalness: .0.1,
+    metalness: 0.1,
   }));
 
   scene.add(pathObj);
