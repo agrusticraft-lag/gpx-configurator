@@ -403,18 +403,6 @@ body{
     <input type="range" id="rotVView" min="5" max="85" step="1" value="38">
     <span id="rotVViewVal">38°</span>
   </div>
-</div>
-      <div id="viewControls">
-    <button type="button" id="zoomOut" title="Dézoomer">−</button>
-    <button type="button" id="zoomIn" title="Zoomer">+</button>
-
-    <button type="button" id="rotLeft" title="Tourner à gauche">↺</button>
-    <button type="button" id="rotRight" title="Tourner à droite">↻</button>
-
-    <button type="button" id="tiltDown" title="Incliner vers le bas">↓</button>
-    <button type="button" id="tiltUp" title="Incliner vers le haut">↑</button>
-
-</div>
 
   </div>
 
@@ -1826,20 +1814,8 @@ bindViewSlider('zoomView', 'zoomViewVal', 'zoom', v=>v.toFixed(2)+'×');
 bindViewSlider('rotHView', 'rotHViewVal', 'rotH', v=>Math.round(v)+'°');
 bindViewSlider('rotVView', 'rotVViewVal', 'rotV', v=>Math.round(v)+'°');
   
-function changeView(key, delta, min, max){
-  cfg[key] = clamp(cfg[key] + delta, min, max);
-  syncViewSliders();
-  updateCamera();
-}
 
-$('zoomOut').addEventListener('click',()=>changeView('zoom', -0.08, 0.4, 2.5));
-$('zoomIn').addEventListener('click',()=>changeView('zoom', 0.08, 0.4, 2.5));
 
-$('rotLeft').addEventListener('click',()=>changeView('rotH', -10, -180, 180));
-$('rotRight').addEventListener('click',()=>changeView('rotH', 10, -180, 180));
-
-$('tiltDown').addEventListener('click',()=>changeView('rotV', -5, 5, 85));
-$('tiltUp').addEventListener('click',()=>changeView('rotV', 5, 5, 85));
 
 // Surface 3D autour du tracé : ce paramètre modifie la bbox,
 // donc il faut recharger pour refaire l'appel DEM et recalculer le relief.
