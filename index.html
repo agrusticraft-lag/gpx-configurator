@@ -106,7 +106,41 @@ body{
       color:rgba(255,255,255,.08);pointer-events:none;
     }
 
+#viewControls{
+  position:absolute;
+  right:18px;
+  bottom:18px;
+  display:grid;
+  grid-template-columns:repeat(2,36px);
+  gap:7px;
+  padding:9px;
+  background:rgba(13,13,11,.72);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:8px;
+  backdrop-filter:blur(8px);
+  z-index:20;
+}
 
+#viewControls button{
+  width:36px;
+  height:32px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:5px;
+  background:rgba(255,255,255,.08);
+  color:white;
+  font-family:var(--mono);
+  font-size:15px;
+  cursor:pointer;
+  transition:.12s;
+}
+
+#viewControls button:hover{
+  background:rgba(255,255,255,.20);
+}
+
+#viewControls button:active{
+  transform:scale(.96);
+}
 
     /* ── Sidebar ── */
 #sidebar{
@@ -296,6 +330,17 @@ body{
     <div id="statsOverlay"></div>
     <div id="plateOverlay"></div>
     <div id="watermark">Agrusti Craft</div>
+      <div id="viewControls">
+    <button type="button" id="zoomOut" title="Dézoomer">−</button>
+    <button type="button" id="zoomIn" title="Zoomer">+</button>
+
+    <button type="button" id="rotLeft" title="Tourner à gauche">↺</button>
+    <button type="button" id="rotRight" title="Tourner à droite">↻</button>
+
+    <button type="button" id="tiltDown" title="Incliner vers le bas">↓</button>
+    <button type="button" id="tiltUp" title="Incliner vers le haut">↑</button>
+  </div>
+</div>
 
   </div>
 
