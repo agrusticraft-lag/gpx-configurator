@@ -485,7 +485,7 @@ body{
       <div class="stitle"><span class="num">4</span>Palette terrain</div>
       <div class="clabel">Couleur</div>
    <div class="pgrid" id="pgrid">
-  <div class="popt active" data-p="gris" title="Gris" style="background:#b8b8b8">Gris</div>
+  <div class="popt active" data-p="gris" title="Gris" style="background:#8c8c8c">Gris</div>
   <div class="popt" data-p="blanc" title="Blanc" style="background:#ffffff">Blanc</div>
   <div class="popt" data-p="noir" title="Noir" style="background:#2f2f2f;color:rgba(255,255,255,.65)">Noir</div>
 </div>
@@ -630,7 +630,7 @@ let cfg = {
   elevScale: 4.0, baseThick: 0.5, margin: 0.20,
   zoom: 1.0, rotH: -30, rotV: 38,
   traceW: 0.07, traceH: 0.09, traceColor: '#d45000',
-  terrainColor: '#b8b8b8',
+  terrainColor: '#8c8c8c',
   txt1: 'Le nom de ta course 1', txt2: '57.5 km · 4380 m D+', txt3: 'Bravo pour cette course',
   txt1Align: 'center', txt2Align: 'center', txt3Align: 'center',
   textLetterSpacing: -3,
@@ -1858,13 +1858,13 @@ $('pgrid').querySelectorAll('.popt').forEach(el=>el.addEventListener('click',()=
   currentPalette = el.dataset.p;
 
   const terrainColors = {
-  gris:  '#b8b8b8',
-  blanc: '#ffffff',
+  gris:  '#8c8c8c',
+  blanc: '#f2f2f2',',
   noir:  '#2f2f2f'
 };
 
 
-  cfg.terrainColor = terrainColors[currentPalette] || '#e8e4dc';
+  cfg.terrainColor = terrainColors[currentPalette] || '#8c8c8c';
 
   if(heightmapCache) buildScene();
 }));
