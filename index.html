@@ -29,7 +29,36 @@
   min-height:100vh;
   overflow:auto;
 }
-   
+   #viewControls{
+  position:absolute;
+  right:18px;
+  bottom:18px;
+  display:grid;
+  grid-template-columns:repeat(3,34px);
+  gap:6px;
+  padding:8px;
+  background:rgba(13,13,11,.70);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;
+  backdrop-filter:blur(8px);
+  z-index:20;
+}
+
+#viewControls button{
+  width:34px;
+  height:30px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:5px;
+  background:rgba(255,255,255,.08);
+  color:white;
+  font-family:var(--mono);
+  font-size:14px;
+  cursor:pointer;
+}
+
+#viewControls button:hover{
+  background:rgba(255,255,255,.18);
+}
     /* ── Header ── */
     #header{
       position:fixed;top:0;left:0;right:0;z-index:100;
@@ -290,6 +319,14 @@
     <div id="statsOverlay"></div>
     <div id="plateOverlay"></div>
     <div id="watermark">Agrusti Craft</div>
+     <div id="viewControls">
+    <button type="button" id="zoomOut">−</button>
+    <button type="button" id="zoomIn">+</button>
+    <button type="button" id="rotLeft">↺</button>
+    <button type="button" id="rotRight">↻</button>
+    <button type="button" id="tiltDown">↓</button>
+    <button type="button" id="tiltUp">↑</button>
+  </div>
   </div>
 
   <div id="sidebar">
