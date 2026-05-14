@@ -362,7 +362,9 @@ body{
       line-height:1.6;padding:7px 9px;background:#fff8e1;
       border:1px solid #ffe082;border-radius:var(--r);margin-top:7px;
     }
-
+.hidden-view-row{
+  display:none;
+}
     @media(max-width:900px){
       #app{grid-template-columns:1fr;height:auto;overflow:auto}
       #viewer{height:65vw;min-height:320px}
@@ -444,21 +446,21 @@ body{
         <input type="range" id="base" min="0.1" max="2.0" step="0.05" value="0.5">
         <span class="val" id="baseVal">0.50</span>
       </div>
-      <div class="row">
-        <label>Zoom</label>
-        <input type="range" id="zoom" min="0.4" max="2.5" step="0.02" value="1.0">
-        <span class="val" id="zoomVal">1.00×</span>
-      </div>
-      <div class="row">
-        <label>Rotation H</label>
-        <input type="range" id="rotH" min="-180" max="180" step="1" value="-30">
-        <span class="val" id="rotHVal">-30°</span>
-      </div>
-      <div class="row">
-        <label>Inclinaison</label>
-        <input type="range" id="rotV" min="5" max="85" step="1" value="38">
-        <span class="val" id="rotVVal">38°</span>
-      </div>
+ <div class="row hidden-view-row">
+  <label>Zoom</label>
+  <input type="range" id="zoom" min="0.4" max="2.5" step="0.02" value="1.0">
+  <span class="val" id="zoomVal">1.00×</span>
+</div>
+<div class="row hidden-view-row">
+  <label>Rotation H</label>
+  <input type="range" id="rotH" min="-180" max="180" step="1" value="-30">
+  <span class="val" id="rotHVal">-30°</span>
+</div>
+<div class="row hidden-view-row">
+  <label>Inclinaison</label>
+  <input type="range" id="rotV" min="5" max="85" step="1" value="38">
+  <span class="val" id="rotVVal">38°</span>
+</div>
     </div>
 
     <!-- 3 · Surface terrain -->
