@@ -1415,6 +1415,10 @@ function buildPath(elevH){
     color: new THREE.Color(cfg.traceColor),
     roughness: .95,
     metalness: 0.1,
+      transparent: false,
+  opacity: 1.0,
+  depthWrite: true,
+  depthTest: true
   }));
 
   scene.add(pathObj);
