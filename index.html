@@ -1330,15 +1330,18 @@ function addPreviewWoodBase(group, baseY){
 
 function addPreviewFrameBase(group, baseY){
   // FORMAT CADRE
-  // dimensions réelles voulues :
-  const frameThicknessMm = 17;      // épaisseur bois
-  const frameWidthMm = currentSizeMm; // 150 mm si format cadre en 15 cm
-  const frameTotalHeightMm = 180;   // hauteur totale du cadre
-  const visibleBottomMm = frameTotalHeightMm - currentSizeMm; // ex: 180 - 150 = 30 mm
+  // Planche bois complète sous la montagne : 150 x 180 x 17 mm
+  const frameThicknessMm = 17;      // hauteur/épaisseur verticale du bois
+  const frameWidthMm = currentSizeMm; // 150 mm
+  const frameDepthMm = 180;         // profondeur totale du bois
+  const terrainDepthMm = currentSizeMm; // 150 mm
 
-  const woodW = SIZE * (frameWidthMm / currentSizeMm);       // largeur
-  const woodH = SIZE * (visibleBottomMm / currentSizeMm);    // partie visible sous le relief
-  const woodD = SIZE * (frameThicknessMm / currentSizeMm);   // épaisseur
+  const woodW = SIZE * (frameWidthMm / currentSizeMm);
+  const woodH = SIZE * (frameThicknessMm / currentSizeMm);
+  const woodD = SIZE * (frameDepthMm / currentSizeMm);
+
+  const extraFrontMm = frameDepthMm - terrainDepthMm; // 30 mm
+  const extraFrontWorld = SIZE * (extraFrontMm / currentSizeMm);
 
   const oakTexture = makeOakLamelleTexture();
 
@@ -1356,25 +1359,30 @@ function addPreviewFrameBase(group, baseY){
     woodMat
   );
 
-  // placé juste sous le relief, comme une bande visible en façade
+  // Le bois est sous toute la montagne et dépasse vers l'avant.
+  // Terrain : z de -SIZE/2 à +SIZE/2
+  // Bois : arrière aligné avec le terrain, avant plus long de 30 mm
   const yCenter = baseY - woodH / 2;
+  const zCenter = extraFrontWorld / 2;
 
-  base.position.set(0, yCenter, SIZE / 2 + woodD / 2 - 0.02);
+  base.position.set(0, yCenter, zCenter);
   group.add(base);
 
-  // texte sur 2 lignes sur la face avant
+  // Texte sur la face avant du bois
   const line1Y = yCenter + woodH * 0.18;
-  const line2Y = yCenter - woodH * 0.18;
+  const line2Y = yCenter - woodH * 0.22;
 
-  addFrameFrontText(group, cfg.txt1, line1Y, woodD);
-  addFrameFrontText(group, cfg.txt2, line2Y, woodD);
+  const frontZ = SIZE / 2 + extraFrontWorld;
+
+  addFrameFrontText(group, cfg.txt1, line1Y, frontZ);
+  addFrameFrontText(group, cfg.txt2, line2Y, frontZ);
 }
 
-function addFrameFrontText(group, text, yPos, woodD){
+function addFrameFrontText(group, text, yPos, frontZ){
   if(!text || !text.trim()) return;
 
   const TEXT_MARGIN_MM = 10;
-  const TEXT_HEIGHT_MM = 7.5;
+  const TEXT_HEIGHT_MM = 6.5;
   const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
 
   const tex = makeTextTexture(text, {
@@ -1397,13 +1405,12 @@ function addFrameFrontText(group, text, yPos, woodD){
   const geo = new THREE.PlaneGeometry(textW, textH);
   const mesh = new THREE.Mesh(geo, mat);
 
-  const eps = 0.01;
+  const eps = 0.012;
 
-  // texte aligné à gauche sur la face avant du bois
   mesh.position.set(
     -SIZE / 2 + SIZE * (TEXT_MARGIN_MM / currentSizeMm) + textW / 2,
     yPos,
-    SIZE / 2 + woodD + eps
+    frontZ + eps
   );
 
   group.add(mesh);
