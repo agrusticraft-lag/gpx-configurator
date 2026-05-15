@@ -1368,17 +1368,17 @@ function addPreviewFrameBase(group, baseY){
   base.position.set(0, yCenter, zCenter);
   group.add(base);
 
-  // Texte sur la face avant du bois
-  const line1Y = yCenter + woodH * 0.18;
-  const line2Y = yCenter - woodH * 0.22;
+const topY = yCenter + woodH / 2 + 0.012;
 
-  const frontZ = SIZE / 2 + extraFrontWorld;
+// Position du texte sur le dessus de la partie bois qui dépasse
+const line1Z = SIZE / 2 + extraFrontWorld * 0.38;
+const line2Z = SIZE / 2 + extraFrontWorld * 0.68;
 
-  addFrameFrontText(group, cfg.txt1, line1Y, frontZ);
-  addFrameFrontText(group, cfg.txt2, line2Y, frontZ);
+addFrameTopText(group, cfg.txt1, line1Z, topY);
+addFrameTopText(group, cfg.txt2, line2Z, topY);
 }
 
-function addFrameFrontText(group, text, yPos, frontZ){
+function addFrameTopText(group, text, zPos, topY){
   if(!text || !text.trim()) return;
 
   const TEXT_MARGIN_MM = 10;
@@ -1405,13 +1405,15 @@ function addFrameFrontText(group, text, yPos, frontZ){
   const geo = new THREE.PlaneGeometry(textW, textH);
   const mesh = new THREE.Mesh(geo, mat);
 
-  const eps = 0.012;
-
+  // Position sur le dessus horizontal du bois
   mesh.position.set(
     -SIZE / 2 + SIZE * (TEXT_MARGIN_MM / currentSizeMm) + textW / 2,
-    yPos,
-    frontZ + eps
+    topY,
+    zPos
   );
+
+  // Mettre le texte à plat sur le dessus du bois
+  mesh.rotation.x = -Math.PI / 2;
 
   group.add(mesh);
 }
