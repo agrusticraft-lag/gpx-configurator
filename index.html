@@ -742,7 +742,6 @@ let currentPalette = 'glacier';
 let cfg = {
   format: 'bureau',
   elevScale: 2.0, baseThick: 0.5, margin: 0.20,
-  elevScale: 2.0, baseThick: 0.5, margin: 0.20,
   zoom: 1.0, rotH: -30, rotV: 38,
   traceW: 0.07, traceH: 0.09, traceColor: '#b87333',
   terrainColor: '#8c8c8c',
@@ -1396,6 +1395,7 @@ function addFrameTopText(group, text, zPos, topY){
     map: tex,
     transparent: true,
     depthWrite: false,
+    depthTest: false,
     side: THREE.DoubleSide
   });
 
@@ -1405,15 +1405,15 @@ function addFrameTopText(group, text, zPos, topY){
   const geo = new THREE.PlaneGeometry(textW, textH);
   const mesh = new THREE.Mesh(geo, mat);
 
-  // Position sur le dessus horizontal du bois
   mesh.position.set(
     -SIZE / 2 + SIZE * (TEXT_MARGIN_MM / currentSizeMm) + textW / 2,
     topY,
     zPos
   );
 
-  // Mettre le texte à plat sur le dessus du bois
+  // texte posé à plat sur le bois
   mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = 99;
 
   group.add(mesh);
 }
@@ -1971,7 +1971,7 @@ function exportSTL(){
 
   setStatus('Génération des STL terrain + GPX…');
 
-  const elevH = 1.8 * (cfg.elevScale / 4);
+const elevH = getRealScaleElevationHeight() * cfg.elevScale;
   const baseY = -cfg.baseThick;
   const hm = heightmapCache.heights;
 
