@@ -595,12 +595,12 @@ text-shadow:0 1px 2px rgba(0,0,0,.45);
       <div class="row">
         <label>Largeur</label>
         <input type="range" id="traceW" min="0.02" max="0.30" step="0.005" value="0.07">
-        <span class="val" id="traceWVal">0.070</span>
+        <span class="val" id="traceWVal">1.8 mm</span>
       </div>
       <div class="row">
         <label>Hauteur</label>
         <input type="range" id="traceH" min="0.02" max="0.40" step="0.005" value="0.09">
-        <span class="val" id="traceHVal">0.090</span>
+        <span class="val" id="traceHVal">2.3 mm</span>
       </div>
       <div class="clabel" style="margin-top:4px">Couleur</div>
 <div class="cgrid" id="cgrid">
@@ -1919,8 +1919,8 @@ function bindCam(id, key, fmt){
 
 bindRebuild('elev',   'elevScale', v=>v.toFixed(1));
 bindRebuild('base',   'baseThick', v=>v.toFixed(2));
-bindRebuild('traceW', 'traceW',    v=>v.toFixed(3));
-bindRebuild('traceH', 'traceH',    v=>v.toFixed(3));
+bindRebuild('traceW', 'traceW', v => `${(v * currentSizeMm / SIZE).toFixed(1)} mm`);
+bindRebuild('traceH', 'traceH', v => `${(v * currentSizeMm / SIZE).toFixed(1)} mm`);
 bindCam('zoom', 'zoom', v=>v.toFixed(2)+'×');
 bindCam('rotH', 'rotH', v=>v+'°');
 bindCam('rotV', 'rotV', v=>v+'°');
@@ -2027,7 +2027,12 @@ $('txt3Align').addEventListener('change',()=>{ cfg.txt3Align=$('txt3Align').valu
 $('sizeGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('click',()=>{
   $('sizeGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
   el.classList.add('active');
+
   currentSizeMm = parseInt(el.dataset.mm);
+
+  $('traceWVal').textContent = `${(cfg.traceW * currentSizeMm / SIZE).toFixed(1)} mm`;
+  $('traceHVal').textContent = `${(cfg.traceH * currentSizeMm / SIZE).toFixed(1)} mm`;
+
   if(heightmapCache) buildScene();
 }));
 
