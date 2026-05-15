@@ -535,8 +535,8 @@ text-shadow:0 1px 2px rgba(0,0,0,.45);
       <div class="stitle"><span class="num">2</span>Relief &amp; vue</div>
       <div class="row">
         <label>Élévation ×</label>
-        <input type="range" id="elev" min="1" max="12" step="0.5" value="4">
-        <span class="val" id="elevVal">4.0</span>
+        <input type="range" id="elev" min="1" max="6" step="0.5" value="2">
+        <span class="val" id="elevVal">2.0</span>
       </div>
       <div class="row">
         <label>Base (mm)</label>
@@ -725,7 +725,7 @@ const PALETTES = {
 let currentPalette = 'glacier';
 
 let cfg = {
-  elevScale: 4.0, baseThick: 0.5, margin: 0.20,
+  elevScale: 2.0, baseThick: 0.5, margin: 0.20,
   zoom: 1.0, rotH: -30, rotV: 38,
   traceW: 0.07, traceH: 0.09, traceColor: '#b87333',
   terrainColor: '#8c8c8c',
@@ -1307,13 +1307,45 @@ function addPreviewWoodBase(group, baseY){
   addFaceText(group, cfg.txt3, 'W', yCenter, baseHeightWorld, cfg.txt3Align);
 }
 
+  function getRealScaleElevationHeight(){
+  if(!heightmapCache || !gpxBBox) return 1.8;
+
+  // Différence d'altitude réelle en mètres entre le point bas et le point haut
+  const eleRangeM = heightmapCache.eleRange || 1;
+
+  // Largeur réelle de la zone en mètres
+  const widthM = latLonDist(
+    (gpxBBox.minLat + gpxBBox.maxLat) / 2,
+    gpxBBox.minLon,
+    (gpxBBox.minLat + gpxBBox.maxLat) / 2,
+    gpxBBox.maxLon
+  );
+
+  // Hauteur réelle de la zone en mètres
+  const heightM = latLonDist(
+    gpxBBox.minLat,
+    (gpxBBox.minLon + gpxBBox.maxLon) / 2,
+    gpxBBox.maxLat,
+    (gpxBBox.minLon + gpxBBox.maxLon) / 2
+  );
+
+  // Comme la bbox est carrée dans ton code, on prend la plus grande dimension
+  const realSizeM = Math.max(widthM, heightM);
+
+  // SIZE = largeur du modèle dans Three.js
+  // Donc on convertit les mètres réels en unités Three.js
+  const worldUnitPerMeter = SIZE / realSizeM;
+
+  // Hauteur réelle du relief à l'échelle du modèle
+  return eleRangeM * worldUnitPerMeter;
+}
 function buildScene(){
   if(!scene || !heightmapCache) return;
   if(terrainGroup){clearObj(terrainGroup);scene.remove(terrainGroup);}
   if(pathObj){clearObj(pathObj);scene.remove(pathObj);}
 
   const hm    = heightmapCache.heights;
-  const elevH = 1.8*(cfg.elevScale/4);
+  const elevH = getRealScaleElevationHeight() * cfg.elevScale;
   const baseY = -cfg.baseThick;
   terrainGroup = new THREE.Group();
 
@@ -1755,7 +1787,7 @@ async function generateAndUploadOrderSTLs(){
     throw new Error('Charge d’abord un fichier GPX.');
   }
 
-  const elevH = 1.8 * (cfg.elevScale / 4);
+  const elevH = getRealScaleElevationHeight() * cfg.elevScale;
   const baseY = -cfg.baseThick;
   const hm = heightmapCache.heights;
 
