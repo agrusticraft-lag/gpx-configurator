@@ -72,16 +72,16 @@ body{
     /* Status pill */
 #status{
   position:absolute;
-  top:18px;
-  left:18px;
+  top:22px;
+  left:22px;
   background:rgba(13,13,11,.75);
   backdrop-filter:blur(8px);
   border:1px solid rgba(255,255,255,.12);
   border-radius:3px;
   font-family:var(--mono);
-  font-size:13px;
+  font-size:16px;
   color:rgba(255,255,255,.78);
-  padding:8px 14px;
+  padding:10px 16px;
   letter-spacing:.04em;
   max-width:520px;
   white-space:nowrap;
@@ -118,35 +118,35 @@ body{
 
 #viewSliders{
   position:absolute;
-  right:22px;
-  bottom:22px;
+  right:26px;
+  bottom:26px;
   z-index:20;
-  width:340px;
-  padding:16px;
+  width:390px;
+  padding:20px;
   background:rgba(13,13,11,.72);
   border:1px solid rgba(255,255,255,.14);
-  border-radius:10px;
+  border-radius:12px;
   backdrop-filter:blur(8px);
   font-family:var(--mono);
 }
 
 .view-slider-row{
   display:grid;
-  grid-template-columns:92px 1fr 58px;
+  grid-template-columns:115px 1fr 68px;
   align-items:center;
-  gap:10px;
-  margin-bottom:10px;
+  gap:12px;
+  margin-bottom:13px;
 }
 
 .view-slider-row label{
-  font-size:12px;
-  color:rgba(255,255,255,.68);
+  font-size:14px;
+  color:rgba(255,255,255,.72);
 }
 
 .view-slider-row span{
-  font-size:12px;
+  font-size:14px;
   text-align:right;
-  color:rgba(255,255,255,.82);
+  color:rgba(255,255,255,.86);
 }
 
 #viewSliders input[type=range]{
@@ -220,20 +220,20 @@ body{
 
 .stitle{
   font-family:var(--mono);
-  font-size:12px;
+  font-size:15px;
   text-transform:uppercase;
   letter-spacing:.14em;
   color:var(--ink3);
-  margin-bottom:14px;
+  margin-bottom:16px;
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:10px;
 }
     .stitle .num{
-      width:16px;height:16px;border-radius:50%;
+      width:20px;height:20px;border-radius:50%;
       background:var(--ink);color:var(--bg);
       display:flex;align-items:center;justify-content:center;
-      font-size:8px;flex-shrink:0;font-family:var(--mono);
+      font-size:12px;flex-shrink:0;font-family:var(--mono);
     }
 
     /* Dropzone */
@@ -244,8 +244,8 @@ body{
     }
     .dropzone:hover,.dropzone.over{background:var(--bg3);border-color:var(--ink3)}
     .dropzone .dicon{font-size:20px;margin-bottom:4px}
-    .dropzone strong{font-family:var(--sans);font-size:12px;font-weight:500;display:block;margin-bottom:2px}
-    .dropzone p{font-family:var(--mono);font-size:10px;color:var(--ink3)}
+    .dropzone strong{font-family:var(--sans);font-size:16px;font-weight:500;display:block;margin-bottom:2px}
+    .dropzone p{font-family:var(--mono);font-size:14px;color:var(--ink3)}
 
 .finfo{
   margin-top:8px;
@@ -343,11 +343,11 @@ input[type=text],select{
     /* Colors */
     .clabel{
   font-family:var(--mono);
-  font-size:11px;
+  font-size:13px;
   color:var(--ink3);
   letter-spacing:.08em;
   text-transform:uppercase;
-  margin-bottom:7px;
+  margin-bottom:9px;
 }
    .cgrid{
   display:flex;
@@ -384,12 +384,22 @@ input[type=text],select{
 
     /* Palette terrain */
     .pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px}
-    .popt{
-      border-radius:3px;cursor:pointer;border:2px solid transparent;
-      transition:.12s;height:28px;font-family:var(--mono);font-size:8px;
-      color:rgba(0,0,0,.5);display:flex;align-items:flex-end;
-      padding:2px 3px;overflow:hidden;position:relative;
-    }
+.popt{
+  border-radius:4px;
+  cursor:pointer;
+  border:2px solid transparent;
+  transition:.12s;
+  height:38px;
+  font-family:var(--mono);
+  font-size:14px;
+  color:rgba(0,0,0,.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 6px;
+  overflow:hidden;
+  position:relative;
+}
     .popt.active{border-color:var(--ink)}
 
     /* Note */
