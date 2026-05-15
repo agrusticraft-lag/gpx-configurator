@@ -508,7 +508,22 @@ text-shadow:0 1px 2px rgba(0,0,0,.45);
   </div>
 
   <div id="sidebar">
+<!-- 0 · Format -->
+<div class="section">
+  <div class="stitle"><span class="num">0</span>Format</div>
 
+  <div class="size-grid" id="formatGrid">
+    <div class="size-opt active" data-format="bureau">
+      <strong>Bureau</strong>
+      À poser
+    </div>
+
+    <div class="size-opt" data-format="cadre">
+      <strong>Cadre</strong>
+      À accrocher
+    </div>
+  </div>
+</div>
     <!-- 1 · GPX -->
     <div class="section">
       <div class="stitle"><span class="num">1</span>Fichier GPX</div>
@@ -725,6 +740,8 @@ const PALETTES = {
 let currentPalette = 'glacier';
 
 let cfg = {
+  format: 'bureau',
+  elevScale: 2.0, baseThick: 0.5, margin: 0.20,
   elevScale: 2.0, baseThick: 0.5, margin: 0.20,
   zoom: 1.0, rotH: -30, rotV: 38,
   traceW: 0.07, traceH: 0.09, traceColor: '#b87333',
@@ -1278,6 +1295,10 @@ function makeOakLamelleTexture(){
 }
 
 function addPreviewWoodBase(group, baseY){
+    if(cfg.format === 'cadre'){
+    addPreviewFrameBase(group, baseY);
+    return;
+  }
   // Hauteur réelle voulue : 17 mm.
   // Dans la preview, SIZE correspond à la largeur choisie : 100/150/200/250 mm.
   // IMPORTANT : ce socle est ajouté uniquement dans Three.js, jamais dans exportSTL().
@@ -1307,6 +1328,74 @@ function addPreviewWoodBase(group, baseY){
   addFaceText(group, cfg.txt3, 'W', yCenter, baseHeightWorld, cfg.txt3Align);
 }
 
+function addPreviewFrameBase(group, baseY){
+  // FORMAT CADRE — planche bois plus haute sous la montagne
+  const woodHeightMm = 55;
+  const baseHeightWorld = SIZE * (woodHeightMm / currentSizeMm);
+  const yCenter = baseY - baseHeightWorld / 2;
+
+  const oakTexture = makeOakLamelleTexture();
+
+  const woodMat = new THREE.MeshStandardMaterial({
+    map: oakTexture,
+    color: 0xb07a40,
+    roughness: 0.92,
+    metalness: 0.0,
+    bumpMap: oakTexture,
+    bumpScale: 0.012
+  });
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(SIZE, baseHeightWorld, SIZE),
+    woodMat
+  );
+
+  base.position.y = yCenter;
+  group.add(base);
+
+  // Texte devant, sous le modèle 3D
+  const line1Y = baseY - baseHeightWorld * 0.55;
+  const line2Y = baseY - baseHeightWorld * 0.76;
+
+  addFrameFrontText(group, cfg.txt1, line1Y);
+  addFrameFrontText(group, cfg.txt2, line2Y);
+}
+
+function addFrameFrontText(group, text, yPos){
+  if(!text || !text.trim()) return;
+
+  const TEXT_MARGIN_MM = 14;
+  const TEXT_HEIGHT_MM = 9;
+  const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
+
+  const tex = makeTextTexture(text, {
+    align: 'center',
+    letterSpacing: cfg.textLetterSpacing,
+    textWidthMm,
+    textHeightMm: TEXT_HEIGHT_MM
+  });
+
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  });
+
+  const textW = SIZE * (textWidthMm / currentSizeMm);
+  const textH = SIZE * (TEXT_HEIGHT_MM / currentSizeMm);
+
+  const geo = new THREE.PlaneGeometry(textW, textH);
+  const mesh = new THREE.Mesh(geo, mat);
+
+  const eps = 0.008;
+
+  // Face avant du bois
+  mesh.position.set(0, yPos, SIZE / 2 + eps);
+
+  group.add(mesh);
+}
+  
   function getRealScaleElevationHeight(){
   if(!heightmapCache || !gpxBBox) return 1.8;
 
@@ -1958,7 +2047,51 @@ bindViewSlider('zoomView', 'zoomViewVal', 'zoom', v=>v.toFixed(2)+'×');
 bindViewSlider('rotHView', 'rotHViewVal', 'rotH', v=>Math.round(v)+'°');
 bindViewSlider('rotVView', 'rotVViewVal', 'rotV', v=>Math.round(v)+'°');
   
+// Format Bureau / Cadre
+$('formatGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('click',()=>{
+  $('formatGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
 
+  cfg.format = el.dataset.format;
+
+  updateFormatUI();
+}));
+
+function updateFormatUI(){
+  const size150 = $('sizeGrid').querySelector('.size-opt[data-mm="150"]');
+  const size200 = $('sizeGrid').querySelector('.size-opt[data-mm="200"]');
+
+  if(cfg.format === 'bureau'){
+    $('txt3').style.display = 'block';
+    $('txt3Align').style.display = 'block';
+
+    if(size200) size200.style.display = '';
+
+    setStatus('Format bureau sélectionné');
+  }
+
+  if(cfg.format === 'cadre'){
+    $('txt3').style.display = 'none';
+    $('txt3Align').style.display = 'none';
+
+    // En format cadre : uniquement 15 cm
+    currentSizeMm = 150;
+
+    $('sizeGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
+    if(size150) size150.classList.add('active');
+    if(size200) size200.style.display = 'none';
+
+    setStatus('Format cadre mural sélectionné');
+  }
+
+  // Met à jour les valeurs largeur/hauteur du tracé
+  $('traceWVal').textContent = `${(cfg.traceW * currentSizeMm / SIZE).toFixed(1)}`;
+  $('traceHVal').textContent = `${(cfg.traceH * currentSizeMm / SIZE).toFixed(1)}`;
+
+  if(heightmapCache) buildScene();
+}
+
+updateFormatUI();
 
 
 // Surface 3D autour du tracé : ce paramètre modifie la bbox,
