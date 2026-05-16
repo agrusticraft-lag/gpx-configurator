@@ -492,8 +492,8 @@ text-shadow:0 1px 2px rgba(0,0,0,.45);
   <div id="viewer">
     <canvas id="c"></canvas>
     <div id="status">⛰ En attente d'un fichier GPX…</div>
-    <div id="statsOverlay"></div>
-    <div id="plateOverlay"></div>
+   /* <div id="statsOverlay"></div>*/
+   /* <div id="plateOverlay"></div>*/
     <div id="watermark">Agrusti Craft</div>
     <div id="viewSliders">
   <div class="view-slider-row">
@@ -1712,20 +1712,20 @@ function updateCamera(){
 }
 
 function updatePlate(){
-  const lines = [cfg.txt1, cfg.txt2, cfg.txt3].filter(Boolean);
-  $('plateOverlay').innerHTML = lines.join('<br>');
+  /*const lines = [cfg.txt1, cfg.txt2, cfg.txt3].filter(Boolean);*/
+  /*$('plateOverlay').innerHTML = lines.join('<br>');*/
 }
 
 function updateStats(){
-  if(!gpxPoints || !heightmapCache) return;
-  const s = gpxStats(gpxPoints);
-  const el = $('statsOverlay');
-  el.style.display = 'block';
-  el.innerHTML = `
-    <strong>${s.distKm.toFixed(1)} km</strong> distance<br>
-    <strong>D+ ${s.dPlus} m</strong> dénivelé<br>
-    <strong>${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m</strong> altitude
-  `;
+//  if(!gpxPoints || !heightmapCache) return;
+ // const s = gpxStats(gpxPoints);
+  //const el = $('statsOverlay');
+  //el.style.display = 'block';
+  //el.innerHTML = `
+   // <strong>${s.distKm.toFixed(1)} km</strong> distance<br>
+    //<strong>D+ ${s.dPlus} m</strong> dénivelé<br>
+    //<strong>${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m</strong> altitude
+  //`;
 }
 
 function animate(){ requestAnimationFrame(animate); renderer.render(scene,camera); }
