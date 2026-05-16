@@ -1406,23 +1406,22 @@ function addPreviewWoodBase(group, baseY){
 
   // Texte posé sur le dessus de la partie bois qui dépasse devant.
   const topY = yCenter + woodH / 2 + 0.014;
-
-  const line1Z = SIZE / 2 + extraFrontWorld * 0.32;
+const line1Z = SIZE / 2 + extraFrontWorld * 0.32;
 const line2Z = SIZE / 2 + extraFrontWorld * 0.68;
 
-  addFrameTopText(group, cfg.txt1, line1Z, topY);
-  addFrameTopText(group, cfg.txt2, line2Z, topY);
+addFrameTopText(group, cfg.txt1, line1Z, topY, cfg.txt1Align);
+addFrameTopText(group, cfg.txt2, line2Z, topY, cfg.txt2Align);
 }
 
-function addFrameTopText(group, text, zPos, topY){
+function addFrameTopText(group, text, zPos, topY, align='left'){
   if(!text || !text.trim()) return;
 
-  const TEXT_MARGIN_MM = 5;
+  const TEXT_MARGIN_MM = 2;
   const TEXT_HEIGHT_MM = 15;
   const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
 
   const tex = makeTextTexture(text, {
-    align: 'left',
+    align: align,
     letterSpacing: cfg.textLetterSpacing,
     textWidthMm,
     textHeightMm: TEXT_HEIGHT_MM
@@ -1442,8 +1441,22 @@ function addFrameTopText(group, text, zPos, topY){
   const geo = new THREE.PlaneGeometry(textW, textH);
   const mesh = new THREE.Mesh(geo, mat);
 
+  let xPos = 0;
+
+  if(align === 'left'){
+    xPos = -SIZE / 2 + SIZE * (TEXT_MARGIN_MM / currentSizeMm) + textW / 2;
+  }
+
+  if(align === 'center'){
+    xPos = 0;
+  }
+
+  if(align === 'right'){
+    xPos = SIZE / 2 - SIZE * (TEXT_MARGIN_MM / currentSizeMm) - textW / 2;
+  }
+
   mesh.position.set(
-    -SIZE / 2 + SIZE * (TEXT_MARGIN_MM / currentSizeMm) + textW / 2,
+    xPos,
     topY,
     zPos
   );
