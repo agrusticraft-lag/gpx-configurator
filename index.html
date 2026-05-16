@@ -1370,7 +1370,7 @@ function addPreviewWoodBase(group, baseY){
 
   const frameThicknessMm = 17;
   const frameWidthMm = currentSizeMm;
-  const frameDepthMm = 180;
+  const frameDepthMm = 170;
   const terrainDepthMm = currentSizeMm;
 
   const woodW = SIZE * (frameWidthMm / currentSizeMm);
@@ -1407,8 +1407,8 @@ function addPreviewWoodBase(group, baseY){
   // Texte posé sur le dessus de la partie bois qui dépasse devant.
   const topY = yCenter + woodH / 2 + 0.014;
 
-  const line1Z = SIZE / 2 + extraFrontWorld * 0.35;
-  const line2Z = SIZE / 2 + extraFrontWorld * 0.70;
+  const line1Z = SIZE / 2 + extraFrontWorld * 0.32;
+const line2Z = SIZE / 2 + extraFrontWorld * 0.68;
 
   addFrameTopText(group, cfg.txt1, line1Z, topY);
   addFrameTopText(group, cfg.txt2, line2Z, topY);
@@ -1418,7 +1418,7 @@ function addFrameTopText(group, text, zPos, topY){
   if(!text || !text.trim()) return;
 
   const TEXT_MARGIN_MM = 10;
-  const TEXT_HEIGHT_MM = 6.5;
+  const TEXT_HEIGHT_MM = 8.5;
   const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
 
   const tex = makeTextTexture(text, {
