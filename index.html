@@ -1192,8 +1192,8 @@ function addFaceText(group, text, side, yCenter, baseH, align='center'){
   if(!text || !text.trim()) return;
 
   const BASE_HEIGHT_MM = 17;
-  const TEXT_MARGIN_MM = 12;      // marge gauche/droite réelle sur le socle
-  const TEXT_HEIGHT_MM = 10.5;    // hauteur réelle du champ texte, stable car le socle reste à 17 mm
+  const TEXT_MARGIN_MM = 6;      // marge gauche/droite réelle sur le socle
+  const TEXT_HEIGHT_MM = 15;    // hauteur réelle du champ texte, stable car le socle reste à 17 mm
   const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
 
   const tex = makeTextTexture(text, {
@@ -1417,7 +1417,7 @@ const line2Z = SIZE / 2 + extraFrontWorld * 0.68;
 function addFrameTopText(group, text, zPos, topY){
   if(!text || !text.trim()) return;
 
-  const TEXT_MARGIN_MM = 10;
+  const TEXT_MARGIN_MM = 5;
   const TEXT_HEIGHT_MM = 15;
   const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
 
