@@ -509,6 +509,23 @@ text-shadow:0 1px 2px rgba(0,0,0,.45);
 
   <div id="sidebar">
 
+<!-- 0 · Format -->
+<div class="section">
+  <div class="stitle"><span class="num">0</span>Format</div>
+
+  <div class="size-grid" id="formatGrid">
+    <div class="size-opt active" data-format="bureau">
+      <strong>Bureau</strong>
+      À poser
+    </div>
+
+    <div class="size-opt" data-format="cadre">
+      <strong>Cadre</strong>
+      À accrocher
+    </div>
+  </div>
+</div>
+    
     <!-- 1 · GPX -->
     <div class="section">
       <div class="stitle"><span class="num">1</span>Fichier GPX</div>
@@ -725,6 +742,7 @@ const PALETTES = {
 let currentPalette = 'glacier';
 
 let cfg = {
+    format: 'bureau',
   elevScale: 2.0, baseThick: 0.5, margin: 0.20,
   zoom: 1.0, rotH: -30, rotV: 38,
   traceW: 0.07, traceH: 0.09, traceColor: '#b87333',
@@ -1278,6 +1296,10 @@ function makeOakLamelleTexture(){
 }
 
 function addPreviewWoodBase(group, baseY){
+    if(cfg.format === 'cadre'){
+    addPreviewFrameBase(group, baseY);
+    return;
+  }
   // Hauteur réelle voulue : 17 mm.
   // Dans la preview, SIZE correspond à la largeur choisie : 100/150/200/250 mm.
   // IMPORTANT : ce socle est ajouté uniquement dans Three.js, jamais dans exportSTL().
@@ -1338,6 +1360,99 @@ function addPreviewWoodBase(group, baseY){
 
   // Hauteur réelle du relief à l'échelle du modèle
   return eleRangeM * worldUnitPerMeter;
+}
+
+  function addPreviewFrameBase(group, baseY){
+  // FORMAT CADRE
+  // Planche bois complète : 150 x 180 x 17 mm
+  // Terrain 3D : 150 x 150 mm
+  // Le bois dépasse donc de 30 mm devant pour le texte.
+
+  const frameThicknessMm = 17;
+  const frameWidthMm = currentSizeMm;
+  const frameDepthMm = 180;
+  const terrainDepthMm = currentSizeMm;
+
+  const woodW = SIZE * (frameWidthMm / currentSizeMm);
+  const woodH = SIZE * (frameThicknessMm / currentSizeMm);
+  const woodD = SIZE * (frameDepthMm / currentSizeMm);
+
+  const extraFrontMm = frameDepthMm - terrainDepthMm;
+  const extraFrontWorld = SIZE * (extraFrontMm / currentSizeMm);
+
+  const oakTexture = makeOakLamelleTexture();
+
+  const woodMat = new THREE.MeshStandardMaterial({
+    map: oakTexture,
+    color: 0xb07a40,
+    roughness: 0.92,
+    metalness: 0.0,
+    bumpMap: oakTexture,
+    bumpScale: 0.012
+  });
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(woodW, woodH, woodD),
+    woodMat
+  );
+
+  const yCenter = baseY - woodH / 2;
+
+  // Le bois reste sous toute la montagne et dépasse vers l’avant.
+  const zCenter = extraFrontWorld / 2;
+
+  base.position.set(0, yCenter, zCenter);
+  group.add(base);
+
+  // Texte posé sur le dessus de la partie bois qui dépasse devant.
+  const topY = yCenter + woodH / 2 + 0.014;
+
+  const line1Z = SIZE / 2 + extraFrontWorld * 0.35;
+  const line2Z = SIZE / 2 + extraFrontWorld * 0.70;
+
+  addFrameTopText(group, cfg.txt1, line1Z, topY);
+  addFrameTopText(group, cfg.txt2, line2Z, topY);
+}
+
+function addFrameTopText(group, text, zPos, topY){
+  if(!text || !text.trim()) return;
+
+  const TEXT_MARGIN_MM = 10;
+  const TEXT_HEIGHT_MM = 6.5;
+  const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
+
+  const tex = makeTextTexture(text, {
+    align: 'left',
+    letterSpacing: cfg.textLetterSpacing,
+    textWidthMm,
+    textHeightMm: TEXT_HEIGHT_MM
+  });
+
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    side: THREE.DoubleSide
+  });
+
+  const textW = SIZE * (textWidthMm / currentSizeMm);
+  const textH = SIZE * (TEXT_HEIGHT_MM / currentSizeMm);
+
+  const geo = new THREE.PlaneGeometry(textW, textH);
+  const mesh = new THREE.Mesh(geo, mat);
+
+  mesh.position.set(
+    -SIZE / 2 + SIZE * (TEXT_MARGIN_MM / currentSizeMm) + textW / 2,
+    topY,
+    zPos
+  );
+
+  // Texte couché sur le dessus du bois.
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = 99;
+
+  group.add(mesh);
 }
 function buildScene(){
   if(!scene || !heightmapCache) return;
@@ -1958,7 +2073,50 @@ bindViewSlider('zoomView', 'zoomViewVal', 'zoom', v=>v.toFixed(2)+'×');
 bindViewSlider('rotHView', 'rotHViewVal', 'rotH', v=>Math.round(v)+'°');
 bindViewSlider('rotVView', 'rotVViewVal', 'rotV', v=>Math.round(v)+'°');
   
+// Format Bureau / Cadre
+$('formatGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('click',()=>{
+  $('formatGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
 
+  cfg.format = el.dataset.format;
+
+  updateFormatUI();
+}));
+
+function updateFormatUI(){
+  const size150 = $('sizeGrid').querySelector('.size-opt[data-mm="150"]');
+  const size200 = $('sizeGrid').querySelector('.size-opt[data-mm="200"]');
+
+  if(cfg.format === 'bureau'){
+    $('txt3').style.display = 'block';
+    $('txt3Align').style.display = 'block';
+
+    if(size200) size200.style.display = '';
+
+    setStatus('Format bureau sélectionné');
+  }
+
+  if(cfg.format === 'cadre'){
+    $('txt3').style.display = 'none';
+    $('txt3Align').style.display = 'none';
+
+    // En format cadre : uniquement 15 cm
+    currentSizeMm = 150;
+
+    $('sizeGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
+    if(size150) size150.classList.add('active');
+    if(size200) size200.style.display = 'none';
+
+    setStatus('Format cadre mural sélectionné');
+  }
+
+  $('traceWVal').textContent = `${(cfg.traceW * currentSizeMm / SIZE).toFixed(1)}`;
+  $('traceHVal').textContent = `${(cfg.traceH * currentSizeMm / SIZE).toFixed(1)}`;
+
+  if(heightmapCache) buildScene();
+}
+
+updateFormatUI();
 
 
 // Surface 3D autour du tracé : ce paramètre modifie la bbox,
@@ -2029,8 +2187,8 @@ $('sizeGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('cli
 
   currentSizeMm = parseInt(el.dataset.mm);
 
-  $('traceWVal').textContent = `${(cfg.traceW * currentSizeMm / SIZE).toFixed(1)} mm`;
-  $('traceHVal').textContent = `${(cfg.traceH * currentSizeMm / SIZE).toFixed(1)} mm`;
+  $('traceWVal').textContent = `${(cfg.traceW * currentSizeMm / SIZE).toFixed(1)}`;
+  $('traceHVal').textContent = `${(cfg.traceH * currentSizeMm / SIZE).toFixed(1)}`;
 
   if(heightmapCache) buildScene();
 }));
@@ -2143,10 +2301,11 @@ $('orderBtn').addEventListener('click', async ()=>{
       id: 53839425077589,
       quantity: 1,
       properties: {
+         "Format": cfg.format === 'cadre' ? 'Cadre mural' : 'Bureau',
         "Fichier GPX": pendingName,
         "Course": cfg.txt1,
         "Infos": cfg.txt2,
-        "Texte 3": cfg.txt3,
+        "Texte 3": cfg.format === 'cadre' ? '' : cfg.txt3,
         "Distance": `${s.distKm.toFixed(1)} km`,
         "D+": `${s.dPlus} m`,
         "D-": `${s.dMinus} m`,
