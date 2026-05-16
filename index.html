@@ -748,7 +748,7 @@ let cfg = {
   traceW: 0.07, traceH: 0.09, traceColor: '#b87333',
   terrainColor: '#8c8c8c',
   txt1: 'Le nom de ta course 1', txt2: '57.5 km · 4380 m D+', txt3: 'Bravo pour cette course',
-  txt1Align: 'center', txt2Align: 'center', txt3Align: 'center',
+  txt1Align: 'left', txt2Align: 'left', txt3Align: 'left',
   textLetterSpacing: -3,
 };
 
@@ -1188,7 +1188,7 @@ function makeTextTexture(text, opts={}){
   return tex;
 }
 
-function addFaceText(group, text, side, yCenter, baseH, align='center'){
+function addFaceText(group, text, side, yCenter, baseH, align='left'){
   if(!text || !text.trim()) return;
 
   const BASE_HEIGHT_MM = 17;
