@@ -479,7 +479,7 @@ text-shadow:0 1px 2px rgba(0,0,0,.45);
       body{overflow:auto}
     }
   </style>
-   <script type="module" src="/src/blob-client.js"></script>
+
 </head>
 <body>
 
@@ -680,7 +680,7 @@ text-shadow:0 1px 2px rgba(0,0,0,.45);
     <!-- 8 · Export -->
     <div class="section">
       <div class="stitle"><span class="num">8</span>Export &amp; Commande</div>
-     <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger Terrain + GPX</button>
+     <!-- <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger Terrain + GPX</button>-->
       <button class="btn btn-green" id="orderBtn" disabled>Commander →</button>
       <div class="note" style="margin-top:8px">
         STL prêt à slicer — terrain + tracé uniquement. Le socle bois est affiché en preview seulement.
@@ -1836,200 +1836,9 @@ g.normalizeNormals();
 g.computeBoundingSphere();
 return g;
 }
-function createSTLBlobFromTriangles(tris, filename){
-  const scale = currentSizeMm / SIZE;
 
-  const buf = new ArrayBuffer(80 + 4 + tris.length * 50);
-  const dv = new DataView(buf);
 
-  const hdr = `Relief3D — ${filename}`;
-  for(let i = 0; i < 80; i++){
-    dv.setUint8(i, i < hdr.length ? hdr.charCodeAt(i) : 0);
-  }
 
-  dv.setUint32(80, tris.length, true);
-
-  let off = 84;
-  const nv = new THREE.Vector3();
-
-  for(const [a, b, c] of tris){
-    nv.crossVectors(
-      new THREE.Vector3().subVectors(b, a),
-      new THREE.Vector3().subVectors(c, a)
-    ).normalize();
-
-    for(const v of [nv, a, b, c]){
-      dv.setFloat32(off, v.x * scale, true); off += 4;
-      dv.setFloat32(off, v.y * scale, true); off += 4;
-      dv.setFloat32(off, v.z * scale, true); off += 4;
-    }
-
-    dv.setUint16(off, 0, true);
-    off += 2;
-  }
-
-  return new Blob([buf], { type: 'application/octet-stream' });
-}
-
-  
-function downloadSTLFromTriangles(tris, filename){
-  const blob = createSTLBlobFromTriangles(tris, filename);
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-
-  URL.revokeObjectURL(url);
-}
-  
-async function waitForVercelBlobClient(){
-  const start = Date.now();
-
-  while(!window.uploadVercelBlob){
-    if(Date.now() - start > 8000){
-      throw new Error('Client Vercel Blob non chargé.');
-    }
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  return window.uploadVercelBlob;
-}
-
-async function uploadSTLToVercel(stlBlob, filename){
-  const upload = await waitForVercelBlobClient();
-
-  const safeFilename = filename
-    .replace(/\s+/g, '-')
-    .replace(/[^\w.\-]/g, '')
-    .toLowerCase();
-
-const pathname = `${Date.now()}-${safeFilename}`;
-
-  const blob = await upload(pathname, stlBlob, {
-    access: 'public',
-    handleUploadUrl: '/api/upload-stl',
-    contentType: 'application/octet-stream',
-    onUploadProgress: ({ percentage }) => {
-      setStatus(`Upload STL ${safeFilename}… ${Math.round(percentage)}%`);
-    }
-  });
-
-  return blob.url;
-}
-
-async function generateAndUploadOrderSTLs(){
-  if(!heightmapCache){
-    throw new Error('Charge d’abord un fichier GPX.');
-  }
-
-  const elevH = getRealScaleElevationHeight() * cfg.elevScale;
-  const baseY = -cfg.baseThick;
-  const hm = heightmapCache.heights;
-
-  const safeName = (cfg.txt1 || 'relief3d')
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]/g, '')
-    .toLowerCase();
-
-  const terrainFilename = `terrain-${safeName}-${currentSizeMm}mm.stl`;
-  const terrainGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
-  const terrainTris = collectTrianglesFromGeometry(terrainGeo);
-  const terrainBlob = createSTLBlobFromTriangles(terrainTris, terrainFilename);
-
-  const terrainUrl = await uploadSTLToVercel(terrainBlob, terrainFilename);
-
-  let traceUrl = '';
-
-  if(normalizedPath && normalizedPath.length > 1){
-    const traceFilename = `trace-gpx-${safeName}-${currentSizeMm}mm.stl`;
-    const traceGeo = createRaisedPathGeometry(elevH);
-    const traceTris = collectTrianglesFromGeometry(traceGeo);
-    const traceBlob = createSTLBlobFromTriangles(traceTris, traceFilename);
-
-    traceUrl = await uploadSTLToVercel(traceBlob, traceFilename);
-  }
-
-  return {
-    terrainUrl,
-    traceUrl
-  };
-}
-  
-  function collectTrianglesFromGeometry(geo){
-  const tris = [];
-  const pos = geo.attributes.position;
-  const ix = geo.index;
-
-  const mk = i => new THREE.Vector3(
-    pos.getX(i),
-    pos.getY(i),
-    pos.getZ(i)
-  );
-
-  if(ix){
-    for(let i = 0; i < ix.count; i += 3){
-      tris.push([
-        mk(ix.getX(i)),
-        mk(ix.getX(i + 1)),
-        mk(ix.getX(i + 2))
-      ]);
-    }
-  } else {
-    for(let i = 0; i < pos.count; i += 3){
-      tris.push([
-        mk(i),
-        mk(i + 1),
-        mk(i + 2)
-      ]);
-    }
-  }
-
-  geo.dispose();
-  return tris;
-}
-function exportSTL(){
-  if(!heightmapCache){
-    alert('Charge d\'abord un fichier GPX.');
-    return;
-  }
-
-  setStatus('Génération des STL terrain + GPX…');
-
-  const elevH = 1.8 * (cfg.elevScale / 4);
-  const baseY = -cfg.baseThick;
-  const hm = heightmapCache.heights;
-
-  const safeName = cfg.txt1
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]/g, '')
-    .toLowerCase();
-
-  // 1. STL terrain seul
-  const terrainGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
-  const terrainTris = collectTrianglesFromGeometry(terrainGeo);
-
-  downloadSTLFromTriangles(
-    terrainTris,
-    `terrain-${safeName}-${currentSizeMm}mm.stl`
-  );
-
-  // 2. STL tracé GPX seul
-  if(normalizedPath && normalizedPath.length > 1){
-    const traceGeo = createRaisedPathGeometry(elevH);
-    const traceTris = collectTrianglesFromGeometry(traceGeo);
-
-    setTimeout(() => {
-      downloadSTLFromTriangles(
-        traceTris,
-        `trace-gpx-${safeName}-${currentSizeMm}mm.stl`
-      );
-    }, 300);
-  }
-
-  setStatus('✓ STL terrain + tracé GPX exportés séparément');
-}
 
 // ══════════════════════════════════════════════════════════════
 //  UI BINDINGS
@@ -2243,8 +2052,6 @@ $('loadBtn').addEventListener('click', async function(){
   if(!pendingGPX){ alert('Sélectionne d\'abord un fichier GPX.'); return; }
   this.disabled=true;
   heightmapCache=null; normalizedPath=null;
-  $('stlBtn').disabled=true; $('orderBtn').disabled=true;
-//  $('statsOverlay').style.display='none';
   const badge=$('terrainBadge'); badge.style.display='none';
   $('reloadNote').style.display='none';
 
@@ -2280,7 +2087,6 @@ $('loadBtn').addEventListener('click', async function(){
 
     buildScene();
 
-    $('stlBtn').disabled=false;
     $('orderBtn').disabled=false;
 
     badge.style.display='inline-block';
@@ -2299,8 +2105,6 @@ $('loadBtn').addEventListener('click', async function(){
     this.disabled=false;
   }
 });
-
-$('stlBtn').addEventListener('click', exportSTL);
 
 async function generateAndUploadOrderSTLsSecure(){
   if(!pendingGPX){
