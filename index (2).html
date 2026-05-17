@@ -1,0 +1,2375 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agrusti Craft — Configurateur3D de trophée de trail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #0d0d0b;
+      --ink2: #3a3a36;
+      --ink3: #7a7a72;
+      --bg: #f4f2ed;
+      --bg2: #eceae4;
+      --bg3: #e0ddd6;
+      --line: rgba(13,13,11,.10);
+      --accent: #d45000;
+      --accent2: #2c5f2e;
+      --r: 4px;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+      --display: 'Bebas Neue', sans-serif;
+    } 
+    *{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--ink);
+  height:100vh;
+  overflow:hidden;
+}
+ 
+    /* ── Header ── */
+    #header{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      height:52px;padding:0 24px;
+      display:flex;align-items:center;justify-content:space-between;
+      background:var(--ink);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    #header .logo{
+      font-family:var(--display);font-size:26px;letter-spacing:.04em;
+      color:#fff;display:flex;align-items:baseline;gap:10px;
+    }
+   #header .logo span{
+  font-family:var(--mono);
+  font-size:12px;
+  color:rgba(255,255,255,.75);
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:400;
+}
+    #header .badge{
+      font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5);
+      letter-spacing:.08em;text-transform:uppercase;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+      padding:4px 10px;border-radius:2px;
+    }
+
+
+    /* ── Layout ── */
+#app{
+  display:grid;
+  grid-template-columns:1fr 390px;
+  height:calc(100vh - 52px);
+  margin-top:52px;
+  overflow:hidden;
+}
+
+    /* ── Viewer ── */
+#viewer{
+  position:relative;
+  background:#1a1a17;
+  overflow:hidden;
+  height:100%;
+}
+    #viewer canvas{display:block;width:100%;height:100%}
+
+    /* Status pill */
+#status{
+  position:absolute;
+  top:22px;
+  left:22px;
+  background:rgba(13,13,11,.75);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:3px;
+  font-family:var(--mono);
+  font-size:16px;
+  color:rgba(255,255,255,.78);
+  padding:10px 16px;
+  letter-spacing:.04em;
+  max-width:520px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+    /* Stats overlay */
+    #statsOverlay{
+      position:absolute;top:14px;right:14px;
+      display:none;
+      font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.55);
+      background:rgba(13,13,11,.6);backdrop-filter:blur(8px);
+      border:1px solid rgba(255,255,255,.1);border-radius:2px;
+      padding:8px 12px;line-height:2;
+    }
+    #statsOverlay strong{color:rgba(255,255,255,.85);font-weight:500}
+
+    /* Plate overlay */
+    #plateOverlay{
+      position:absolute;bottom:20px;left:0;right:0;
+      text-align:center;pointer-events:none;
+      font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+      color:rgba(220,215,200,.75);text-shadow:0 1px 3px rgba(0,0,0,.5);
+      line-height:1.8;
+    }
+
+    /* Corner watermark */
+    #watermark{
+      position:absolute;bottom:16px;right:16px;
+      font-family:var(--display);font-size:18px;letter-spacing:.06em;
+      color:rgba(255,255,255,.08);pointer-events:none;
+    }
+
+#viewSliders{
+  position:absolute;
+  right:12px;
+  bottom:10px;
+  z-index:20;
+  width:330px;
+  padding:12px 14px;
+  background:rgba(13,13,11,.72);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:10px;
+  backdrop-filter:blur(8px);
+  font-family:var(--mono);
+}
+
+.view-slider-row{
+  display:grid;
+  grid-template-columns:95px 1fr 52px;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
+}
+
+    .view-slider-row:last-child{
+  margin-bottom:0;
+}
+.view-slider-row label{
+  font-size:14px;
+  color:rgba(255,255,255,.72);
+}
+
+.view-slider-row span{
+  font-size:14px;
+  text-align:right;
+  color:rgba(255,255,255,.86);
+}
+
+#viewSliders input[type=range]{
+  -webkit-appearance:none;
+  width:100%;
+  height:2px;
+  background:rgba(255,255,255,.22);
+  border-radius:1px;
+  outline:none;
+}
+
+#viewSliders input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:#fff;
+  cursor:pointer;
+}
+    
+#viewControls{
+  position:absolute;
+  right:18px;
+  bottom:18px;
+  display:grid;
+  grid-template-columns:repeat(2,36px);
+  gap:7px;
+  padding:9px;
+  background:rgba(13,13,11,.72);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:8px;
+  backdrop-filter:blur(8px);
+  z-index:20;
+}
+
+#viewControls button{
+  width:36px;
+  height:32px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:5px;
+  background:rgba(255,255,255,.08);
+  color:white;
+  font-family:var(--mono);
+  font-size:15px;
+  cursor:pointer;
+  transition:.12s;
+}
+
+#viewControls button:hover{
+  background:rgba(255,255,255,.20);
+}
+
+#viewControls button:active{
+  transform:scale(.96);
+}
+
+    /* ── Sidebar ── */
+#sidebar{
+  border-left:1px solid var(--line);
+  overflow-y:auto;
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+  height:100%;
+}
+    #sidebar::-webkit-scrollbar{width:4px}
+    #sidebar::-webkit-scrollbar-track{background:var(--bg2)}
+    #sidebar::-webkit-scrollbar-thumb{background:var(--bg3)}
+
+    .section{padding:14px 16px;border-bottom:1px solid var(--line)}
+
+.stitle{
+  font-family:var(--mono);
+  font-size:15px;
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  color:var(--ink3);
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+    .stitle .num{
+      width:20px;height:20px;border-radius:50%;
+      background:var(--ink);color:var(--bg);
+      display:flex;align-items:center;justify-content:center;
+      font-size:12px;flex-shrink:0;font-family:var(--mono);
+    }
+
+    /* Dropzone */
+    .dropzone{
+      border:1px dashed var(--bg3);border-radius:var(--r);
+      padding:16px 12px;text-align:center;cursor:pointer;
+      background:var(--bg2);transition:.15s;
+    }
+    .dropzone:hover,.dropzone.over{background:var(--bg3);border-color:var(--ink3)}
+    .dropzone .dicon{font-size:20px;margin-bottom:4px}
+    .dropzone strong{font-family:var(--sans);font-size:16px;font-weight:500;display:block;margin-bottom:2px}
+    .dropzone p{font-family:var(--mono);font-size:14px;color:var(--ink3)}
+
+.finfo{
+  margin-top:8px;
+  padding:11px 12px;
+  background:var(--bg2);
+  border-radius:var(--r);
+  font-family:var(--mono);
+  font-size:14px;
+  color:var(--ink2);
+  line-height:1.6;
+  display:none;
+}
+    .finfo strong{color:var(--ink);font-weight:500}
+
+    /* Progress */
+    #progWrap{display:none;margin-top:8px}
+    #progBar{height:2px;background:var(--bg3);border-radius:1px;overflow:hidden}
+    #progFill{height:100%;background:var(--accent);width:0%;transition:width .3s}
+    #progLbl{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:3px;letter-spacing:.04em}
+
+    /* Terrain badge */
+    #terrainBadge{
+      display:none;font-family:var(--mono);font-size:9px;
+      padding:3px 8px;border-radius:2px;margin-top:6px;letter-spacing:.04em;
+    }
+    #terrainBadge.real{background:#e8f5e9;color:#2c5f2e;border:1px solid #a5d6a7}
+    #terrainBadge.fallback{background:#fff8e1;color:#7a5c00;border:1px solid #ffe082}
+
+    /* Row sliders */
+   .row{
+  display:grid;
+  grid-template-columns:100px 1fr 46px;
+  align-items:center;
+  gap:6px;
+  margin-bottom:7px;
+}
+   .row label{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--ink3);
+  letter-spacing:.03em;
+       white-space:nowrap;
+
+}
+
+.row .val{
+  font-family:var(--mono);
+  font-size:13px;
+  text-align:right;
+  color:var(--ink2);
+}
+
+    input[type=range]{
+      -webkit-appearance:none;width:100%;height:2px;
+      background:var(--bg3);border-radius:1px;outline:none;
+    }
+    input[type=range]::-webkit-slider-thumb{
+      -webkit-appearance:none;width:12px;height:12px;
+      border-radius:50%;background:var(--ink);cursor:pointer;
+      transition:transform .1s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+
+input[type=text],select{
+  width:100%;
+  padding:11px 12px;
+  font-family:var(--mono);
+  font-size:14px;
+  border:1px solid var(--line);
+  background:var(--bg2);
+  color:var(--ink);
+  border-radius:var(--r);
+  outline:none;
+  margin-bottom:8px;
+  transition:.15s;
+}
+    input[type=text]:focus,select:focus{border-color:var(--accent)}
+
+    /* Buttons */
+ .btn{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:var(--r);
+  font-family:var(--sans);
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  transition:.15s;
+}
+    .btn-dark{background:var(--ink);color:var(--bg)}
+    .btn-dark:hover{background:#282826}
+    .btn-accent{background:var(--accent);color:#fff;margin-top:6px}
+    .btn-accent:hover{background:#b33e00}
+    .btn-green{background:var(--accent2);color:#fff;margin-top:6px}
+    .btn-green:hover{background:#224824}
+    .btn-light{background:var(--bg2);color:var(--ink);border:1px solid var(--line);margin-top:6px}
+    .btn-light:hover{background:var(--bg3)}
+    .btn:disabled{opacity:.35;cursor:not-allowed}
+
+    /* Colors */
+    .clabel{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--ink3);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  margin-bottom:9px;
+}
+   .cgrid{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  margin-top:6px;
+}
+
+.copt{
+  min-width:68px;
+  height:38px;
+  padding:4px 6px;
+  border-radius:4px;
+  cursor:pointer;
+  border:2px solid transparent;
+  transition:.12s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:var(--mono);
+  font-size:13px;
+  color:white;
+  text-shadow:0 1px 2px rgba(0,0,0,.45);
+}
+
+.copt.active{
+  border-color:var(--ink);
+  transform:scale(1.04);
+}
+
+.copt:hover{
+  transform:scale(1.03);
+}
+
+    /* Palette terrain */
+    .pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px}
+.popt{
+  border-radius:4px;
+  cursor:pointer;
+  border:2px solid transparent;
+  transition:.12s;
+  height:38px;
+  font-family:var(--mono);
+  font-size:14px;
+color:#fff;
+text-shadow:0 1px 2px rgba(0,0,0,.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 6px;
+  overflow:hidden;
+  position:relative;
+}
+    .popt.active{border-color:var(--ink)}
+
+    /* Note */
+.note{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--ink3);
+  line-height:1.7;
+  padding:11px 12px;
+  background:var(--bg2);
+  border-radius:var(--r);
+  margin-top:8px;
+  letter-spacing:.02em;
+}
+    .note b{color:var(--ink2)}
+
+    /* Size selector */
+    .size-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+    .size-opt{
+      padding:8px;border:1px solid var(--line);border-radius:var(--r);
+      cursor:pointer;text-align:center;background:var(--bg2);
+      font-family:var(--mono);font-size:13px;color:var(--ink2);
+      transition:.12s;
+    }
+    .size-opt.active{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+    .size-opt:hover:not(.active){background:var(--bg3)}
+    .size-opt strong{display:block;font-size:16px;font-weight:600;margin-bottom:1px}
+
+
+
+    /* Surface terrain */
+    .surface-control{
+      display:grid;grid-template-columns:36px 1fr 36px;align-items:center;gap:6px;
+      margin-bottom:6px;
+    }
+    .surface-btn{
+      height:30px;border:1px solid var(--line);border-radius:var(--r);
+      background:var(--bg2);color:var(--ink);font-family:var(--mono);
+      font-size:18px;line-height:1;cursor:pointer;transition:.12s;
+    }
+    .surface-btn:hover{background:var(--bg3)}
+    .surface-value{
+      text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink2);
+      background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+      padding:8px 6px;
+    }
+    .reload-note{
+      display:none;font-family:var(--mono);font-size:9px;color:#7a5c00;
+      line-height:1.6;padding:7px 9px;background:#fff8e1;
+      border:1px solid #ffe082;border-radius:var(--r);margin-top:7px;
+    }
+.hidden-view-row{
+  display:none;
+}
+    @media(max-width:900px){
+      #app{grid-template-columns:1fr;height:auto;overflow:auto}
+      #viewer{height:65vw;min-height:320px}
+      body{overflow:auto}
+    }
+  </style>
+   <script type="module" src="/src/blob-client.js"></script>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">Agrusti Craft <span>— Configurateur 3D de trophée de trail</span></div>
+  <div class="badge">Beta </div>
+</div>
+
+<div id="app">
+  <div id="viewer">
+    <canvas id="c"></canvas>
+    <div id="status">⛰ En attente d'un fichier GPX…</div>
+   /* <div id="statsOverlay"></div>*/
+   /* <div id="plateOverlay"></div>*/
+    <div id="watermark">Agrusti Craft</div>
+    <div id="viewSliders">
+  <div class="view-slider-row">
+    <label>Zoom</label>
+    <input type="range" id="zoomView" min="0.4" max="2.5" step="0.02" value="1.0">
+    <span id="zoomViewVal">1.00×</span>
+  </div>
+
+  <div class="view-slider-row">
+    <label>Rotation H</label>
+    <input type="range" id="rotHView" min="-180" max="180" step="1" value="-30">
+    <span id="rotHViewVal">-30°</span>
+  </div>
+
+  <div class="view-slider-row">
+    <label>Inclinaison</label>
+    <input type="range" id="rotVView" min="5" max="85" step="1" value="38">
+    <span id="rotVViewVal">38°</span>
+  </div>
+  </div>
+  </div>
+
+  <div id="sidebar">
+
+<!-- 0 · Format -->
+<div class="section">
+  <div class="stitle"><span class="num">0</span>Format</div>
+
+  <div class="size-grid" id="formatGrid">
+    <div class="size-opt active" data-format="bureau">
+      <strong>Bureau</strong>
+      À poser
+    </div>
+
+    <div class="size-opt" data-format="cadre">
+      <strong>Cadre</strong>
+      À accrocher
+    </div>
+  </div>
+</div>
+    
+    <!-- 1 · GPX -->
+    <div class="section">
+      <div class="stitle"><span class="num">1</span>Fichier GPX</div>
+      <div class="dropzone" id="dropzone">
+        <div class="dicon">⛰</div>
+        <strong>Choisir un fichier GPX</strong>
+        <p>ou glisser-déposer ici</p>
+      </div>
+      <input type="file" id="gpxinput" accept=".gpx" style="display:none">
+      <div class="finfo" id="finfo"></div>
+      <div id="progWrap">
+        <div id="progBar"><div id="progFill"></div></div>
+        <div id="progLbl">Chargement…</div>
+      </div>
+      <div id="terrainBadge"></div>
+      <button class="btn btn-dark" id="loadBtn" style="margin-top:8px" disabled>
+        Charger le terrain →
+      </button>
+      <div class="note">
+        <b>Relief personnalisé :</b> ton trophée 3D est construit à partir de ton fichier GPX et des altitudes réelles du terrain.
+      </div>
+    </div>
+
+    <!-- 2 · Relief -->
+    <div class="section">
+      <div class="stitle"><span class="num">2</span>Relief &amp; vue</div>
+      <div class="row">
+        <label>Élévation</label>
+        <input type="range" id="elev" min="1" max="4" step="0.25" value="2">
+        <span class="val" id="elevVal">2.0</span>
+      </div>
+      <div class="row">
+        <label>Base (mm)</label>
+        <input type="range" id="base" min="0.1" max="2.0" step="0.05" value="0.5">
+        <span class="val" id="baseVal">0.50</span>
+      </div>
+ <div class="row hidden-view-row">
+  <label>Zoom</label>
+  <input type="range" id="zoom" min="0.4" max="2.5" step="0.02" value="1.0">
+  <span class="val" id="zoomVal">1.00×</span>
+</div>
+<div class="row hidden-view-row">
+  <label>Rotation H</label>
+  <input type="range" id="rotH" min="-180" max="180" step="1" value="-30">
+  <span class="val" id="rotHVal">-30°</span>
+</div>
+<div class="row hidden-view-row">
+  <label>Inclinaison</label>
+  <input type="range" id="rotV" min="5" max="85" step="1" value="38">
+  <span class="val" id="rotVVal">38°</span>
+</div>
+    </div>
+
+    <!-- 3 · Surface terrain -->
+    <div class="section">
+      <div class="stitle"><span class="num">3</span>Surface 3D</div>
+      <div class="surface-control">
+        <button class="surface-btn" id="surfaceMinus" type="button">−</button>
+        <div class="surface-value" id="surfaceVal">Marge 20%</div>
+        <button class="surface-btn" id="surfacePlus" type="button">+</button>
+      </div>
+      <input type="range" id="surfaceMargin" min="0.05" max="0.60" step="0.05" value="0.20">
+      <div class="reload-note" id="reloadNote">
+        Paramètre modifié : clique sur <b>Charger le terrain</b> pour recalculer le relief avec la nouvelle surface.
+      </div>
+      <div class="note">
+        Augmente ou réduit la zone autour du tracé GPX. Plus la marge est grande, plus le modèle montre de terrain autour de la course.
+      </div>
+    </div>
+
+    <!-- 4 · Couleur Monagne -->
+    <div class="section">
+      <div class="stitle"><span class="num">4</span>Palette terrain</div>
+      <div class="clabel">Couleur</div>
+   <div class="pgrid" id="pgrid">
+  <div class="popt active" data-p="gris" title="Gris" style="background:#5f5f5f">Gris</div>
+<div class="popt" data-p="blanc" title="Blanc" style="background:#ffffff;color:#111;text-shadow:none">Blanc</div>
+  <div class="popt" data-p="noir" title="Noir" style="background:#2f2f2f;color:rgba(255,255,255,.65)">Noir</div>
+</div>
+    </div>
+
+    <!-- 5 · Tracé -->
+    <div class="section">
+      <div class="stitle"><span class="num">5</span>Tracé GPX</div>
+      <div class="row">
+        <label>Largeur (mm)</label>
+        <input type="range" id="traceW" min="0.02" max="0.30" step="0.005" value="0.07">
+        <span class="val" id="traceWVal">1.8</span>
+      </div>
+      <div class="row">
+        <label>Hauteur (mm)</label>
+        <input type="range" id="traceH" min="0.02" max="0.40" step="0.005" value="0.09">
+        <span class="val" id="traceHVal">2.3 </span>
+      </div>
+      <div class="clabel" style="margin-top:4px">Couleur</div>
+<div class="cgrid" id="cgrid">
+  <div class="copt active" data-c="#aa5a19" style="background:#aa5a19" title="Bronze">Bronze</div>
+  <div class="copt" data-c="#bc9949" style="background:#bc9949" title="Or">Or</div>
+  <div class="copt" data-c="#c30404" style="background:#c30404" title="Rouge">Rouge</div>
+  <div class="copt" data-c="#ff7300" style="background:#ff7300" title="Orange">Orange</div>
+  <div class="copt" data-c="#1a9a00" style="background:#1a9a00" title="Vert">Vert</div>
+  <div class="copt" data-c="#1075af" style="background:#1075af" title="Bleu">Bleu</div>
+  <div class="copt" data-c="#5f5f5f" style="background:#5f5f5f" title="Gris">Gris</div>
+  <div class="copt" data-c="#ffffff" style="background:#fff;box-shadow:inset 0 0 0 1px #ccc;color:#111;text-shadow:none" title="Blanc">Blanc</div>
+  <div class="copt" data-c="#111111" style="background:#111111" title="Noir">Noir</div>
+</div>
+    </div>
+
+    <!-- 6 · Plaque -->
+    <div class="section">
+      <div class="stitle"><span class="num">6</span>Plaque gravée</div>
+      <input type="text" id="txt1" value="Patrouille des Glaciers" placeholder="Ligne 1 — Nom de la course">
+      <select id="txt1Align">
+        <option value="left" selected>Ligne 1 — Aligné à gauche</option>
+        <option value="center">Ligne 1 — Centré</option>
+        <option value="right">Ligne 1 — Aligné à droite</option>
+      </select>
+
+      <input type="text" id="txt2" value="57.5 km · 4380 m D+" placeholder="Ligne 2 — Stats">
+      <select id="txt2Align">
+        <option value="left"selected>Ligne 2 — Aligné à gauche</option>
+        <option value="center" >Ligne 2 — Centré</option>
+        <option value="right">Ligne 2 — Aligné à droite</option>
+      </select>
+
+      <input type="text" id="txt3" value="" placeholder="Ligne 3 — Noms / Date (optionnel)">
+      <select id="txt3Align">
+        <option value="left"selected>Ligne 3 — Aligné à gauche</option>
+        <option value="center" >Ligne 3 — Centré</option>
+        <option value="right">Ligne 3 — Aligné à droite</option>
+      </select>
+    </div>
+
+    <!-- 7 · Taille -->
+    <div class="section">
+      <div class="stitle"><span class="num">7</span>Taille du modèle</div>
+      <div class="size-grid" id="sizeGrid">
+        <div class="size-opt active" data-mm="150"><strong>15 cm</strong>150×150 mm</div>
+        <div class="size-opt" data-mm="200"><strong>20 cm</strong>200×200 mm</div>
+      </div>
+    </div>
+
+    <!-- 8 · Export -->
+    <div class="section">
+      <div class="stitle"><span class="num">8</span>Export &amp; Commande</div>
+     <button class="btn btn-accent" id="stlBtn" disabled>⬇ Télécharger Terrain + GPX</button>
+      <button class="btn btn-green" id="orderBtn" disabled>Commander →</button>
+      <div class="note" style="margin-top:8px">
+        STL prêt à slicer — terrain + tracé uniquement. Le socle bois est affiché en preview seulement.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════
+//  RELIEF3D — Configurateur terrain alpin
+//  OpenTopography SRTM GL3 (réel) + fallback IDW
+// ══════════════════════════════════════════════════════════════
+
+const GRID    = 256;
+const SIZE    = 6.0;
+
+let gpxPoints      = null;
+let gpxBBox        = null;
+let heightmapCache = null;
+let normalizedPath = null;
+let pendingGPX     = null;
+let pendingName    = '';
+let renderer, scene, camera, terrainGroup, pathObj;
+let currentSizeMm  = 150;
+
+// Palettes
+const PALETTES = {
+  glacier: [
+    [0.00, .260,.334,.380],
+    [0.18, .380,.490,.565],
+    [0.45, .560,.658,.730],
+    [0.72, .760,.820,.870],
+    [1.00, .920,.938,.950],
+  ],
+  alpin: [
+    [0.00, .290,.375,.250],
+    [0.18, .420,.490,.330],
+    [0.42, .570,.600,.460],
+    [0.70, .780,.758,.680],
+    [1.00, .950,.944,.920],
+  ],
+  sable: [
+    [0.00, .420,.340,.220],
+    [0.18, .560,.480,.330],
+    [0.42, .700,.628,.470],
+    [0.70, .840,.790,.640],
+    [1.00, .960,.950,.920],
+  ],
+  lave: [
+    [0.00, .120,.120,.115],
+    [0.18, .250,.248,.242],
+    [0.42, .440,.436,.428],
+    [0.70, .620,.618,.610],
+    [1.00, .940,.938,.932],
+  ],
+  neige: [
+    [0.00, .480,.580,.660],
+    [0.25, .680,.748,.800],
+    [0.55, .840,.880,.910],
+    [0.80, .940,.954,.964],
+    [1.00, .990,.993,.996],
+  ],
+};
+
+let currentPalette = 'gris';
+
+let cfg = {
+    format: 'bureau',
+  elevScale: 2.0, baseThick: 0.5, margin: 0.20,
+  zoom: 1.0, rotH: -30, rotV: 38,
+  traceW: 0.07, traceH: 0.09, traceColor: '#b87333',
+  terrainColor: '#3f3f3f',
+  txt1: 'Le nom de ta course 1', txt2: '57.5 km · 4380 m D+', txt3: 'Bravo pour cette course',
+  txt1Align: 'left', txt2Align: 'left', txt3Align: 'left',
+  textLetterSpacing: -3,
+};
+
+const $     = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lerp  = (a,b,t) => a + (b-a)*t;
+
+function setStatus(t){ $('status').textContent = t; }
+function setProgress(pct, lbl){
+  $('progWrap').style.display = 'block';
+  $('progFill').style.width   = pct + '%';
+  $('progLbl').textContent    = lbl;
+  if(pct >= 100) setTimeout(()=>{ $('progWrap').style.display='none'; }, 1800);
+}
+
+function latLonDist(a,b,c,d){
+  const R=6371000, r=x=>x*Math.PI/180;
+  const dLa=r(c-a), dLo=r(d-b);
+  const x=Math.sin(dLa/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(dLo/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+function gpxStats(pts){
+  let dist=0,dp=0,dm=0;
+  for(let i=1;i<pts.length;i++){
+    dist += latLonDist(pts[i-1].lat,pts[i-1].lon,pts[i].lat,pts[i].lon);
+    const de = pts[i].ele - pts[i-1].ele;
+    if(de>0) dp+=de; else dm-=de;
+  }
+  return { distKm: dist/1000, dPlus: Math.round(dp), dMinus: Math.round(dm) };
+}
+
+function parseGPX(txt){
+  const doc = new DOMParser().parseFromString(txt,'application/xml');
+  const pts = [];
+  doc.querySelectorAll('trkpt').forEach(p=>{
+    const lat=parseFloat(p.getAttribute('lat')), lon=parseFloat(p.getAttribute('lon'));
+    const el=p.querySelector('ele');
+    if(!isNaN(lat)&&!isNaN(lon)) pts.push({lat,lon,ele:el?parseFloat(el.textContent):0});
+  });
+  return pts;
+}
+
+function resample(pts, n){
+  if(pts.length<=n) return [...pts];
+  const step=(pts.length-1)/(n-1);
+  return Array.from({length:n}, (_,i)=>pts[Math.round(i*step)]);
+}
+
+function computeBBox(pts, m){
+  const lats=pts.map(p=>p.lat), lons=pts.map(p=>p.lon);
+  let[mnLa,mxLa]=[Math.min(...lats),Math.max(...lats)];
+  let[mnLo,mxLo]=[Math.min(...lons),Math.max(...lons)];
+  const dLa=Math.max(1e-6,mxLa-mnLa), dLo=Math.max(1e-6,mxLo-mnLo);
+  // Ensure square bbox
+  const dMax = Math.max(dLa, dLo);
+  const midLa = (mnLa+mxLa)/2, midLo = (mnLo+mxLo)/2;
+  return {
+    minLat: midLa - dMax*(0.5+m), maxLat: midLa + dMax*(0.5+m),
+    minLon: midLo - dMax*(0.5+m), maxLon: midLo + dMax*(0.5+m),
+  };
+}
+
+function smoothGrid(g, passes=2){
+  const H=g.length, W=g[0].length;
+  let cur=g.map(r=>r.slice());
+  for(let p=0;p<passes;p++){
+    const nx=cur.map(r=>r.slice());
+    for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+      let s=0,c=0;
+      for(let oy=-1;oy<=1;oy++) for(let ox=-1;ox<=1;ox++){s+=cur[y+oy][x+ox];c++;}
+      nx[y][x]=s/c;
+    }
+    cur=nx;
+  }
+  return cur;
+}
+
+//const OPENTOPO_API_KEY = "889e4a1067a0652b4010aa80dbf7e18d";
+const DEM_TYPE = "COP30"; // meilleur choix montagne, sinon "SRTMGL1"
+// ══════════════════════════════════════════════════════════════
+//  OPENTOPODATA — Terrain réel SRTM GL3
+//  API : https://api.opentopodata.org/v1/srtm30m
+//  Gratuit · 500 pts/req · 5 req/s · CORS OK
+// ══════════════════════════════════════════════════════════════
+async function loadHeightmap(bbox){
+  setStatus('Chargement OpenTopography DEM…');
+  setProgress(10, 'Requête OpenTopography…');
+
+  const url =
+  `/api/dem` +
+  `?demtype=${DEM_TYPE}` +
+  `&south=${bbox.minLat}` +
+  `&north=${bbox.maxLat}` +
+  `&west=${bbox.minLon}` +
+  `&east=${bbox.maxLon}`;
+ // const url =
+ //   `https://portal.opentopography.org/API/globaldem` +
+  //  `?demtype=${DEM_TYPE}` +
+    //`&south=${bbox.minLat}` +
+    //`&north=${bbox.maxLat}` +
+    //`&west=${bbox.minLon}` +
+    //`&east=${bbox.maxLon}` +
+    //`&outputFormat=AAIGrid` +
+    //`&API_Key=${OPENTOPO_API_KEY}`;
+
+  const resp = await fetch(url);
+
+  if(!resp.ok){
+    throw new Error(`OpenTopography HTTP ${resp.status}: ${await resp.text()}`);
+  }
+
+  const text = await resp.text();
+
+  if(text.trim().startsWith('<')){
+    throw new Error('OpenTopography a retourné du HTML : API key invalide, limite atteinte ou bbox trop grande.');
+  }
+
+  setProgress(45, 'Parsing AAIGrid…');
+
+  const aai = parseAAIGrid(text);
+
+  setProgress(70, 'Interpolation 256×256…');
+
+  const heightsRaw = resampleAAIGridToGrid(aai, bbox, GRID);
+
+  let minE = Infinity;
+  let maxE = -Infinity;
+
+  for(const row of heightsRaw){
+    for(const v of row){
+      if(Number.isFinite(v)){
+        minE = Math.min(minE, v);
+        maxE = Math.max(maxE, v);
+      }
+    }
+  }
+
+  const range = maxE - minE || 1;
+
+  const normalized = heightsRaw.map(row =>
+    row.map(v => clamp((v - minE) / range, 0, 1))
+  );
+
+  const smoothed = smoothGrid(normalized, 1);
+
+  setProgress(100, '✓ Terrain OpenTopography chargé');
+  setStatus(`✓ ${DEM_TYPE} OpenTopography · ${minE.toFixed(0)}–${maxE.toFixed(0)} m`);
+
+  return {
+    heights: smoothed,
+    minEle: minE,
+    maxEle: maxE,
+    eleRange: range,
+    mode: `opentopography-${DEM_TYPE.toLowerCase()}`
+  };
+}
+
+  function parseAAIGrid(text){
+  const lines = text.trim().split(/\r?\n/);
+
+  const header = {};
+  let dataStart = 0;
+
+  for(let i = 0; i < lines.length; i++){
+    const line = lines[i].trim();
+    const parts = line.split(/\s+/);
+    const key = parts[0].toLowerCase();
+
+    if([
+      'ncols',
+      'nrows',
+      'xllcorner',
+      'yllcorner',
+      'xllcenter',
+      'yllcenter',
+      'cellsize',
+      'nodata_value'
+    ].includes(key)){
+      header[key] = Number(parts[1]);
+      dataStart = i + 1;
+    } else {
+      break;
+    }
+  }
+
+  const ncols = header.ncols;
+  const nrows = header.nrows;
+  const cellsize = header.cellsize;
+  const noData = header.nodata_value ?? -9999;
+
+  const xll = header.xllcorner ?? header.xllcenter;
+  const yll = header.yllcorner ?? header.yllcenter;
+
+  if(!ncols || !nrows || !cellsize || !Number.isFinite(xll) || !Number.isFinite(yll)){
+    throw new Error('AAIGrid invalide : header incomplet.');
+  }
+
+  const values = lines
+    .slice(dataStart)
+    .join(' ')
+    .trim()
+    .split(/\s+/)
+    .map(Number);
+
+  if(values.length < ncols * nrows){
+    throw new Error(`AAIGrid incomplet : ${values.length} valeurs pour ${ncols*nrows} attendues.`);
+  }
+
+  const grid = [];
+
+  for(let row = 0; row < nrows; row++){
+    grid[row] = [];
+    for(let col = 0; col < ncols; col++){
+      const v = values[row * ncols + col];
+      grid[row][col] = v === noData ? NaN : v;
+    }
+  }
+
+  return {
+    ncols,
+    nrows,
+    cellsize,
+    noData,
+    xll,
+    yll,
+    grid
+  };
+}
+
+  function resampleAAIGridToGrid(aai, bbox, targetSize){
+  const out = [];
+
+  const west = aai.xll;
+  const south = aai.yll;
+  const east = west + aai.cellsize * (aai.ncols - 1);
+  const north = south + aai.cellsize * (aai.nrows - 1);
+
+  for(let gy = 0; gy < targetSize; gy++){
+    out[gy] = [];
+
+    const lat = bbox.minLat + (bbox.maxLat - bbox.minLat) * gy / (targetSize - 1);
+
+    for(let gx = 0; gx < targetSize; gx++){
+      const lon = bbox.minLon + (bbox.maxLon - bbox.minLon) * gx / (targetSize - 1);
+
+      const fx = (lon - west) / (east - west) * (aai.ncols - 1);
+
+      // AAIGrid : première ligne = nord
+      const fyFromSouth = (lat - south) / (north - south) * (aai.nrows - 1);
+      const fy = (aai.nrows - 1) - fyFromSouth;
+
+      out[gy][gx] = sampleAAIGridBilinear(aai, fx, fy);
+    }
+  }
+
+  return out;
+}
+  function sampleAAIGridBilinear(aai, fx, fy){
+  fx = clamp(fx, 0, aai.ncols - 1);
+  fy = clamp(fy, 0, aai.nrows - 1);
+
+  const x0 = Math.floor(fx);
+  const y0 = Math.floor(fy);
+  const x1 = Math.min(aai.ncols - 1, x0 + 1);
+  const y1 = Math.min(aai.nrows - 1, y0 + 1);
+
+  const tx = fx - x0;
+  const ty = fy - y0;
+
+  const v00 = aai.grid[y0][x0];
+  const v10 = aai.grid[y0][x1];
+  const v01 = aai.grid[y1][x0];
+  const v11 = aai.grid[y1][x1];
+
+  const vals = [v00, v10, v01, v11].filter(Number.isFinite);
+
+  if(vals.length === 0) return 0;
+
+  // fallback propre si un des coins est NoData
+  const safe00 = Number.isFinite(v00) ? v00 : vals[0];
+  const safe10 = Number.isFinite(v10) ? v10 : vals[0];
+  const safe01 = Number.isFinite(v01) ? v01 : vals[0];
+  const safe11 = Number.isFinite(v11) ? v11 : vals[0];
+
+  return lerp(
+    lerp(safe00, safe10, tx),
+    lerp(safe01, safe11, tx),
+    ty
+  );
+}
+// ── Fallback IDW ──────────────────────────────────────────────
+function buildFallbackHeightmap(pts, bbox){
+  const norm=pts.map(p=>({
+    nx:(p.lon-bbox.minLon)/(bbox.maxLon-bbox.minLon||1),
+    ny:(p.lat-bbox.minLat)/(bbox.maxLat-bbox.minLat||1),
+    ele:p.ele
+  }));
+  const minE=Math.min(...pts.map(p=>p.ele)), maxE=Math.max(...pts.map(p=>p.ele));
+  const range=Math.max(1,maxE-minE);
+  const grid=Array.from({length:GRID},(_,gy)=>Array.from({length:GRID},(_,gx)=>{
+    const nx=gx/(GRID-1), ny=1-gy/(GRID-1);
+    let wh=0,wt=0;
+    for(const p of norm){
+      const d2=(nx-p.nx)**2+(ny-p.ny)**2;
+      const w=1/(d2+0.0002);
+      wh+=w*(p.ele-minE)/range; wt+=w;
+    }
+    return wh/wt;
+  }));
+  return { heights:smoothGrid(grid,4), minEle:minE, maxEle:maxE, eleRange:range, mode:'fallback-idw' };
+}
+
+// ── Lecture heightmap ─────────────────────────────────────────
+// nx : 0=minLon (ouest)→1=maxLon (est)
+// ny : 0=minLat (sud)  →1=maxLat (nord)
+// heights[gy][gx] : gy=0=sud=minLat, gy=GRID-1=nord=maxLat
+// Three.js PlaneGeometry rotateX(-PI/2) : z=+SIZE/2=sud, z=-SIZE/2=nord
+// Donc dans buildScene : vertex (gx,gy) → z = (0.5 - ny)*SIZE où ny = gy/(GRID-1)
+function sampleH(nx, ny){
+  if(!heightmapCache?.heights) return 0;
+  const gxf = clamp(nx,0,1) * (GRID-1);
+  const gyf = clamp(ny,0,1) * (GRID-1);
+  const x0=Math.floor(gxf), x1=Math.min(GRID-1,x0+1);
+  const y0=Math.floor(gyf), y1=Math.min(GRID-1,y0+1);
+  const r0=heightmapCache.heights[y0], r1=heightmapCache.heights[y1];
+  if(!r0||!r1) return 0;
+  return lerp(lerp(r0[x0],r0[x1],gxf-x0), lerp(r1[x0],r1[x1],gxf-x0), gyf-y0);
+}
+
+// ── Couleur palette ───────────────────────────────────────────
+function heightColor(h){
+  const stops = PALETTES[currentPalette] || PALETTES.glacier;
+  for(let i=1;i<stops.length;i++){
+    if(h<=stops[i][0]){
+      //const t=(h-stops[i-1][0])/(stops[i][0]-stops[i-1][0]||1);
+      const t = 0;
+      return new THREE.Color(
+        lerp(stops[i-1][1],stops[i][1],t),
+        lerp(stops[i-1][2],stops[i][2],t),
+        lerp(stops[i-1][3],stops[i][3],t)
+      );
+    }
+  }
+  const s=stops[stops.length-1];
+  return new THREE.Color(s[1],s[2],s[3]);
+}
+
+// ── Three.js ──────────────────────────────────────────────────
+function clearObj(o){
+  if(!o) return;
+  while(o.children.length){const c=o.children[0];clearObj(c);o.remove(c);}
+  if(o.geometry) o.geometry.dispose();
+  if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+    if(m.map) m.map.dispose();
+    if(m.bumpMap && m.bumpMap !== m.map) m.bumpMap.dispose();
+    m.dispose();
+  });
+}
+
+
+// ── Socle bois PREVIEW uniquement ─────────────────────────────
+function makeTextTexture(text, opts={}){
+  // Texture adaptée aux dimensions réelles de la face du socle.
+  // La hauteur du texte reste stable car le socle fait toujours 17 mm,
+  // tandis que la largeur disponible suit la taille du modèle (100/150/200/250 mm).
+  const textWidthMm  = opts.textWidthMm  || Math.max(40, currentSizeMm - 24);
+  const textHeightMm = opts.textHeightMm || 10.5;
+  const aspect = clamp(textWidthMm / textHeightMm, 4, 18);
+
+  const canvas = document.createElement('canvas');
+  canvas.height = 512;
+  canvas.width = Math.round(canvas.height * aspect);
+  const ctx = canvas.getContext('2d');
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = opts.bg || 'rgba(0,0,0,0)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = opts.color || '#1a0f05';
+  ctx.textBaseline = 'middle';
+
+  const clean = (text || '').trim();
+  const label = (clean || ' ').toUpperCase();
+  const align = opts.align || 'center';
+  const letterSpacing = opts.letterSpacing ?? -3;
+
+  // 24 pt ≈ 32 px, mais ici on travaille dans une texture haute résolution.
+  // Ce facteur garde un rendu proche de 24 pt sur un socle de 17 mm.
+  let fontSize = Math.round(canvas.height * 0.58);
+  const minFontSize = Math.round(canvas.height * 0.34);
+  const padding = canvas.width * 0.055;
+  const maxWidth = canvas.width - padding * 2;
+
+  function setFont(){
+    ctx.font = `600 ${fontSize}px "Barlow Condensed", Arial, sans-serif`;
+  }
+
+  function measureTextWithSpacing(str, spacing){
+    const chars = str.split('');
+    let total = 0;
+    for(const c of chars) total += ctx.measureText(c).width + spacing;
+    return Math.max(0, total - spacing);
+  }
+
+  setFont();
+  while(measureTextWithSpacing(label, letterSpacing) > maxWidth && fontSize > minFontSize){
+    fontSize -= 2;
+    setFont();
+  }
+
+  function drawTextWithSpacing(str, x, y, spacing, alignMode){
+    const chars = str.split('');
+    const totalWidth = measureTextWithSpacing(str, spacing);
+
+    let startX = x;
+    if(alignMode === 'left')   startX = x;
+    if(alignMode === 'center') startX = x - totalWidth / 2;
+    if(alignMode === 'right')  startX = x - totalWidth;
+
+    let currentX = startX;
+    for(const c of chars){
+      ctx.fillText(c, currentX, y);
+      currentX += ctx.measureText(c).width + spacing;
+    }
+  }
+
+  let x = canvas.width / 2;
+  if(align === 'left') x = padding;
+  if(align === 'right') x = canvas.width - padding;
+
+  drawTextWithSpacing(label, x, canvas.height / 2, letterSpacing, align);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.encoding = THREE.sRGBEncoding;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+function addFaceText(group, text, side, yCenter, baseH, align='left'){
+  if(!text || !text.trim()) return;
+
+  const BASE_HEIGHT_MM = 17;
+  const TEXT_MARGIN_MM = 6;      // marge gauche/droite réelle sur le socle
+  const TEXT_HEIGHT_MM = 15;    // hauteur réelle du champ texte, stable car le socle reste à 17 mm
+  const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
+
+  const tex = makeTextTexture(text, {
+    align,
+    letterSpacing: cfg.textLetterSpacing,
+    textWidthMm,
+    textHeightMm: TEXT_HEIGHT_MM
+  });
+
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  });
+
+  // Conversion mm réel → unités Three.js.
+  // Ainsi : hauteur constante peu importe la taille du modèle,
+  // largeur qui suit la largeur réelle du socle.
+  const textW = SIZE * (textWidthMm / currentSizeMm);
+  const textH = SIZE * (TEXT_HEIGHT_MM / currentSizeMm);
+  const geo = new THREE.PlaneGeometry(textW, textH);
+  const mesh = new THREE.Mesh(geo, mat);
+  const eps = 0.006;
+
+  if(side === 'S'){
+    mesh.position.set(0, yCenter, SIZE/2 + eps);
+  } else if(side === 'N'){
+    mesh.position.set(0, yCenter, -SIZE/2 - eps);
+    mesh.rotation.y = Math.PI;
+  } else if(side === 'E'){
+    mesh.position.set(SIZE/2 + eps, yCenter, 0);
+    mesh.rotation.y = Math.PI/2;
+  } else if(side === 'W'){
+    mesh.position.set(-SIZE/2 - eps, yCenter, 0);
+    mesh.rotation.y = -Math.PI/2;
+  }
+
+  group.add(mesh);
+}
+
+function makeOakLamelleTexture(){
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+
+  // Chêne massif procédural : couleur plus foncée, veinage continu, sans bandes lamellées.
+  const base = [150, 105, 60];
+
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, `rgb(${base[0]-14},${base[1]-12},${base[2]-10})`);
+  grad.addColorStop(0.45, `rgb(${base[0]+20},${base[1]+15},${base[2]+10})`);
+  grad.addColorStop(1, `rgb(${base[0]-8},${base[1]-8},${base[2]-6})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Veinage naturel continu.
+  for(let k = 0; k < 48; k++){
+    ctx.beginPath();
+    const y = Math.random() * canvas.height;
+    ctx.moveTo(0, y);
+
+    for(let x = 0; x <= canvas.width; x += 24){
+      const wave =
+        Math.sin(x * 0.010 + k * 0.8) * 8 +
+        Math.sin(x * 0.032 + k * 1.4) * 3 +
+        Math.sin(x * 0.065 + k) * 1.5;
+      ctx.lineTo(x, y + wave);
+    }
+
+    ctx.strokeStyle = k % 3 === 0
+      ? 'rgba(80,42,16,0.18)'
+      : 'rgba(255,225,170,0.08)';
+    ctx.lineWidth = k % 5 === 0 ? 1.6 : 0.8;
+    ctx.stroke();
+  }
+
+  // Quelques noeuds discrets pour garder un aspect bois massif.
+  for(let i = 0; i < 5; i++){
+    const kx = 120 + ((i * 181) % 800);
+    const ky = 140 + ((i * 237) % 760);
+    const rg = ctx.createRadialGradient(kx, ky, 2, kx, ky, 52);
+    rg.addColorStop(0, 'rgba(70,35,12,0.22)');
+    rg.addColorStop(0.45, 'rgba(110,60,25,0.12)');
+    rg.addColorStop(1, 'rgba(110,60,25,0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.ellipse(kx, ky, 55, 22, 0.18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.encoding = THREE.sRGBEncoding;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1.2, 1.2);
+  tex.anisotropy = 8;
+  return tex;
+}
+
+function addPreviewWoodBase(group, baseY){
+    if(cfg.format === 'cadre'){
+    addPreviewFrameBase(group, baseY);
+    return;
+  }
+  // Hauteur réelle voulue : 17 mm.
+  // Dans la preview, SIZE correspond à la largeur choisie : 100/150/200/250 mm.
+  // IMPORTANT : ce socle est ajouté uniquement dans Three.js, jamais dans exportSTL().
+  const baseHeightWorld = SIZE * (17 / currentSizeMm);
+  const yCenter = baseY - baseHeightWorld / 2;
+
+  const oakTexture = makeOakLamelleTexture(); // texture chêne massif
+  const woodMat = new THREE.MeshStandardMaterial({
+    map: oakTexture,
+    color: 0xb07a40,
+    roughness: 0.92,
+    metalness: 0.0,
+    bumpMap: oakTexture,
+    bumpScale: 0.012
+  });
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(SIZE, baseHeightWorld, SIZE),
+    woodMat
+  );
+  base.position.y = yCenter;
+  group.add(base);
+
+  // Lignes sur les faces du socle : Sud = ligne 1, Est = ligne 2, Ouest = ligne 3.
+  addFaceText(group, cfg.txt1, 'S', yCenter, baseHeightWorld, cfg.txt1Align);
+  addFaceText(group, cfg.txt2, 'E', yCenter, baseHeightWorld, cfg.txt2Align);
+  addFaceText(group, cfg.txt3, 'W', yCenter, baseHeightWorld, cfg.txt3Align);
+}
+
+  function getRealScaleElevationHeight(){
+  if(!heightmapCache || !gpxBBox) return 1.8;
+
+  // Différence d'altitude réelle en mètres entre le point bas et le point haut
+  const eleRangeM = heightmapCache.eleRange || 1;
+
+  // Largeur réelle de la zone en mètres
+  const widthM = latLonDist(
+    (gpxBBox.minLat + gpxBBox.maxLat) / 2,
+    gpxBBox.minLon,
+    (gpxBBox.minLat + gpxBBox.maxLat) / 2,
+    gpxBBox.maxLon
+  );
+
+  // Hauteur réelle de la zone en mètres
+  const heightM = latLonDist(
+    gpxBBox.minLat,
+    (gpxBBox.minLon + gpxBBox.maxLon) / 2,
+    gpxBBox.maxLat,
+    (gpxBBox.minLon + gpxBBox.maxLon) / 2
+  );
+
+  // Comme la bbox est carrée dans ton code, on prend la plus grande dimension
+  const realSizeM = Math.max(widthM, heightM);
+
+  // SIZE = largeur du modèle dans Three.js
+  // Donc on convertit les mètres réels en unités Three.js
+  const worldUnitPerMeter = SIZE / realSizeM;
+
+  // Hauteur réelle du relief à l'échelle du modèle
+  return eleRangeM * worldUnitPerMeter;
+}
+
+  function addPreviewFrameBase(group, baseY){
+  // FORMAT CADRE
+  // Planche bois complète : 150 x 180 x 17 mm
+  // Terrain 3D : 150 x 150 mm
+  // Le bois dépasse donc de 30 mm devant pour le texte.
+
+  const frameThicknessMm = 17;
+  const frameWidthMm = currentSizeMm;
+  const frameDepthMm = 170;
+  const terrainDepthMm = currentSizeMm;
+
+  const woodW = SIZE * (frameWidthMm / currentSizeMm);
+  const woodH = SIZE * (frameThicknessMm / currentSizeMm);
+  const woodD = SIZE * (frameDepthMm / currentSizeMm);
+
+  const extraFrontMm = frameDepthMm - terrainDepthMm;
+  const extraFrontWorld = SIZE * (extraFrontMm / currentSizeMm);
+
+  const oakTexture = makeOakLamelleTexture();
+
+  const woodMat = new THREE.MeshStandardMaterial({
+    map: oakTexture,
+    color: 0xb07a40,
+    roughness: 0.92,
+    metalness: 0.0,
+    bumpMap: oakTexture,
+    bumpScale: 0.012
+  });
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(woodW, woodH, woodD),
+    woodMat
+  );
+
+  const yCenter = baseY - woodH / 2;
+
+  // Le bois reste sous toute la montagne et dépasse vers l’avant.
+  const zCenter = extraFrontWorld / 2;
+
+  base.position.set(0, yCenter, zCenter);
+  group.add(base);
+
+  // Texte posé sur le dessus de la partie bois qui dépasse devant.
+  const topY = yCenter + woodH / 2 + 0.014;
+const line1Z = SIZE / 2 + extraFrontWorld * 0.32;
+const line2Z = SIZE / 2 + extraFrontWorld * 0.68;
+
+addFrameTopText(group, cfg.txt1, line1Z, topY, cfg.txt1Align);
+addFrameTopText(group, cfg.txt2, line2Z, topY, cfg.txt2Align);
+}
+
+function addFrameTopText(group, text, zPos, topY, align='left'){
+  if(!text || !text.trim()) return;
+
+  const TEXT_MARGIN_MM = 2;
+  const TEXT_HEIGHT_MM = 15;
+  const textWidthMm = Math.max(35, currentSizeMm - TEXT_MARGIN_MM * 2);
+
+  const tex = makeTextTexture(text, {
+    align: align,
+    letterSpacing: cfg.textLetterSpacing,
+    textWidthMm,
+    textHeightMm: TEXT_HEIGHT_MM
+  });
+
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    side: THREE.DoubleSide
+  });
+
+  const textW = SIZE * (textWidthMm / currentSizeMm);
+  const textH = SIZE * (TEXT_HEIGHT_MM / currentSizeMm);
+
+  const geo = new THREE.PlaneGeometry(textW, textH);
+  const mesh = new THREE.Mesh(geo, mat);
+
+  let xPos = 0;
+
+  if(align === 'left'){
+    xPos = -SIZE / 2 + SIZE * (TEXT_MARGIN_MM / currentSizeMm) + textW / 2;
+  }
+
+  if(align === 'center'){
+    xPos = 0;
+  }
+
+  if(align === 'right'){
+    xPos = SIZE / 2 - SIZE * (TEXT_MARGIN_MM / currentSizeMm) - textW / 2;
+  }
+
+  mesh.position.set(
+    xPos,
+    topY,
+    zPos
+  );
+
+  // Texte couché sur le dessus du bois.
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = 99;
+
+  group.add(mesh);
+}
+function buildScene(){
+  if(!scene || !heightmapCache) return;
+  if(terrainGroup){clearObj(terrainGroup);scene.remove(terrainGroup);}
+  if(pathObj){clearObj(pathObj);scene.remove(pathObj);}
+
+  const hm    = heightmapCache.heights;
+  const elevH = getRealScaleElevationHeight() * cfg.elevScale;
+  const baseY = -cfg.baseThick;
+  terrainGroup = new THREE.Group();
+
+  // ─ Surface ─
+  // PlaneGeometry (GRID×GRID) rotateX(-PI/2) :
+  //   row gy_p=0       → z = -SIZE/2 (nord, maxLat) → hm[GRID-1] (nord)
+  //   row gy_p=GRID-1  → z = +SIZE/2 (sud, minLat)  → hm[0]      (sud)
+  //   → on accède hm[GRID-1-gy_p][gx]
+ /* const geo = new THREE.PlaneGeometry(SIZE,SIZE,GRID-1,GRID-1);
+  geo.rotateX(-Math.PI/2);
+  const pos = geo.attributes.position;
+  const cols = [];
+  for(let gy_p=0;gy_p<GRID;gy_p++) for(let gx=0;gx<GRID;gx++){
+    const hmRow = GRID-1-gy_p; // gy_p=0=nord → hmRow=GRID-1=maxLat ✓
+    const h = hm[hmRow][gx];
+    pos.setY(gy_p*GRID+gx, h*elevH);
+    const c = heightColor(h); cols.push(c.r,c.g,c.b);
+  }
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  geo.computeVertexNormals();
+  terrainGroup.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({
+    vertexColors:true,roughness:.92,metalness:.02
+  })));
+
+  // ─ Flancs ─
+  const sideMat = new THREE.MeshStandardMaterial({color:0xc8bfb0,roughness:.99});
+  for(const s of ['N','S','W','E']) terrainGroup.add(buildSide(s,hm,elevH,baseY,sideMat));
+
+  // ─ Fond ─
+  const bot = new THREE.Mesh(
+    new THREE.BoxGeometry(SIZE,.001,SIZE),
+    new THREE.MeshStandardMaterial({color:0xd4cabc})
+  );
+  */
+  const solidGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
+
+const mat = new THREE.MeshStandardMaterial({
+  color: new THREE.Color(cfg.terrainColor),
+  roughness: 1.0,
+  metalness: 0.0,
+  flatShading: true
+});
+
+terrainGroup.add(new THREE.Mesh(solidGeo, mat));
+
+  // Socle en bois uniquement pour la prévisualisation.
+  // L'export STL reste inchangé : terrain + tracé GPX séparés.
+  addPreviewWoodBase(terrainGroup, baseY);
+
+ // bot.position.set(0,baseY-.0005,0);
+  //terrainGroup.add(bot);
+
+  scene.add(terrainGroup);
+
+  if(normalizedPath) buildPath(elevH);
+  updatePlate();
+  updateStats();
+}
+
+function buildSide(s,hm,elevH,baseY,mat){
+  // hm[gy][gx] : gy=0=minLat=sud (z=+SIZE/2), gy=GRID-1=maxLat=nord (z=-SIZE/2)
+  // nx=gx/(GRID-1), worldX = (nx-0.5)*SIZE
+  // worldZ = (0.5 - gy/(GRID-1))*SIZE  (gy=0→z=+SIZE/2=sud, gy=GRID-1→z=-SIZE/2=nord)
+  const pts=[]; // {gx, gy}
+  if(s==='N') for(let gx=0;gx<GRID;gx++) pts.push({gx, gy:GRID-1}); // nord = maxLat
+  if(s==='S') for(let gx=0;gx<GRID;gx++) pts.push({gx, gy:0});       // sud  = minLat
+  if(s==='W') for(let gy=0;gy<GRID;gy++) pts.push({gx:0,      gy});
+  if(s==='E') for(let gy=0;gy<GRID;gy++) pts.push({gx:GRID-1, gy});
+  const verts=[],idx=[];
+  for(const p of pts){
+    const wx = (p.gx/(GRID-1) - 0.5) * SIZE;
+    const wz = (0.5 - p.gy/(GRID-1)) * SIZE;
+    const h  = hm[p.gy][p.gx] * elevH;
+    verts.push(wx,h,wz, wx,baseY,wz);
+  }
+  for(let i=0;i<pts.length-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+2,a+1,a+3);}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g,mat);
+}
+
+  function createRaisedPathGeometry(elevH){
+  if(!normalizedPath || normalizedPath.length < 2){
+    return new THREE.BufferGeometry();
+  }
+
+  // Prévisualisation robuste :
+  // - la position du tracé est calculée avec le point le plus haut sous sa largeur
+  // - la hauteur du tracé est ensuite ajoutée au-dessus, sans déplacer le parcours
+  // - l'export STL garde la même logique de géométrie, mais la preview ne rentre plus dans la montagne
+  const rawPts = normalizedPath.map(p => ({
+    nx: p.nx,
+    ny: p.ny,
+    x: (p.nx - 0.5) * SIZE,
+    z: (0.5 - p.ny) * SIZE
+  }));
+
+  const step = Math.max(1, Math.floor(rawPts.length / 500));
+  const reduced = rawPts.filter((_, i) => i % step === 0);
+
+  if(reduced[reduced.length - 1] !== rawPts[rawPts.length - 1]){
+    reduced.push(rawPts[rawPts.length - 1]);
+  }
+
+  const verts = [];
+  const idx = [];
+  const halfW = cfg.traceW / 2;
+  const samples = 7;
+  const visualOffset = 0.002;
+
+  for(let i = 0; i < reduced.length; i++){
+    const p = reduced[i];
+    const prev = reduced[Math.max(0, i - 1)];
+    const next = reduced[Math.min(reduced.length - 1, i + 1)];
+
+    const dx = next.x - prev.x;
+    const dz = next.z - prev.z;
+    const len = Math.hypot(dx, dz) || 1;
+
+    // Perpendiculaire en coordonnées monde
+    const nxWorld = -dz / len;
+    const nzWorld = dx / len;
+
+    // Conversion de la perpendiculaire monde vers coordonnées normalisées GPX/heightmap
+    // world x = (nx - 0.5) * SIZE  => delta nx = delta x / SIZE
+    // world z = (0.5 - ny) * SIZE  => delta ny = -delta z / SIZE
+    const nxMap = nxWorld / SIZE;
+    const nyMap = -nzWorld / SIZE;
+
+    let maxGround = -Infinity;
+
+    // On cherche l'altitude max sous toute la largeur du tracé
+    for(let s = 0; s < samples; s++){
+      const t = (s / (samples - 1) - 0.5) * cfg.traceW;
+      const sx = p.nx + nxMap * t;
+      const sy = p.ny + nyMap * t;
+      const h = sampleH(sx, sy) * elevH;
+      if(h > maxGround) maxGround = h;
+    }
+
+    const bottom = maxGround + visualOffset;
+    const top = bottom + cfg.traceH;
+
+    verts.push(
+      p.x + nxWorld * halfW, bottom, p.z + nzWorld * halfW,
+      p.x - nxWorld * halfW, bottom, p.z - nzWorld * halfW,
+      p.x + nxWorld * halfW, top,    p.z + nzWorld * halfW,
+      p.x - nxWorld * halfW, top,    p.z - nzWorld * halfW
+    );
+  }
+
+  for(let i = 0; i < reduced.length - 1; i++){
+    const a = i * 4;
+    const b = (i + 1) * 4;
+
+    // dessus
+    idx.push(a+2, b+2, a+3, a+3, b+2, b+3);
+
+    // côté gauche
+    idx.push(a+0, a+2, b+0, b+0, a+2, b+2);
+
+    // côté droit
+    idx.push(a+1, b+1, a+3, a+3, b+1, b+3);
+
+    // dessous
+    idx.push(a+0, b+0, a+1, a+1, b+0, b+1);
+  }
+
+  // bouchon début
+  idx.push(0, 1, 2, 2, 1, 3);
+
+  // bouchon fin
+  const e = (reduced.length - 1) * 4;
+  idx.push(e+0, e+2, e+1, e+1, e+2, e+3);
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+
+  return g;
+}
+
+function buildPath(elevH){
+  if(pathObj){
+    clearObj(pathObj);
+    scene.remove(pathObj);
+  }
+
+  if(!normalizedPath || normalizedPath.length < 2) return;
+
+  const pathGeo = createRaisedPathGeometry(elevH);
+
+ pathObj = new THREE.Mesh(pathGeo, new THREE.MeshStandardMaterial({
+  color: new THREE.Color(cfg.traceColor),
+
+  // garde un peu la vraie couleur même avec les ombres
+  emissive: new THREE.Color(cfg.traceColor),
+  emissiveIntensity: 0.08,
+
+  // rendu mat/satiné, pas trop brillant
+  roughness: 0.65,
+  metalness: 0.08,
+
+  transparent: false,
+  opacity: 1.0,
+  depthWrite: true,
+  depthTest: true,
+  side: THREE.DoubleSide
+}));
+
+pathObj.renderOrder = 10;
+
+  scene.add(pathObj);
+}
+
+
+function updateCamera(){
+  const rH=cfg.rotH*Math.PI/180, rV=cfg.rotV*Math.PI/180, dist=11/cfg.zoom;
+  camera.position.set(
+    Math.sin(rH)*Math.cos(rV)*dist,
+    Math.sin(rV)*dist,
+    Math.cos(rH)*Math.cos(rV)*dist
+  );
+  camera.lookAt(0,.5,0);
+}
+
+function updatePlate(){
+  /*const lines = [cfg.txt1, cfg.txt2, cfg.txt3].filter(Boolean);*/
+  /*$('plateOverlay').innerHTML = lines.join('<br>');*/
+}
+
+function updateStats(){
+//  if(!gpxPoints || !heightmapCache) return;
+ // const s = gpxStats(gpxPoints);
+  //const el = $('statsOverlay');
+  //el.style.display = 'block';
+  //el.innerHTML = `
+   // <strong>${s.distKm.toFixed(1)} km</strong> distance<br>
+    //<strong>D+ ${s.dPlus} m</strong> dénivelé<br>
+    //<strong>${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m</strong> altitude
+  //`;
+}
+
+function animate(){ requestAnimationFrame(animate); renderer.render(scene,camera); }
+
+function initThree(){
+  const wrap=$('viewer'), w=wrap.clientWidth||800, h=wrap.clientHeight||600;
+  renderer=new THREE.WebGLRenderer({canvas:$('c'),antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(w,h);
+  renderer.setClearColor(0x1a1a17,1);
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.shadowMap.enabled=true;
+  scene=new THREE.Scene();
+  scene.fog=new THREE.Fog(0x1a1a17,14,28);
+  camera=new THREE.PerspectiveCamera(40,w/h,.1,1000);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff,.65));
+  const key=new THREE.DirectionalLight(0xfff8f0,1.2); key.position.set(5,8,3); scene.add(key);
+  const rim=new THREE.DirectionalLight(0x8ab0d0,.35); rim.position.set(-4,2,-6); scene.add(rim);
+  const fill=new THREE.DirectionalLight(0xffffff,.2); fill.position.set(0,4,-5); scene.add(fill);
+
+  updateCamera();
+  animate();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  EXPORT STL BINAIRE
+// ══════════════════════════════════════════════════════════════
+
+  function buildSolidTerrainGeometry(hm, elevH, baseY){
+  const verts = [];
+
+  const idx = [];
+
+  // Top vertices
+  for(let gy = 0; gy < GRID; gy++){
+    for(let gx = 0; gx < GRID; gx++){
+      const x = (gx / (GRID - 1) - 0.5) * SIZE;
+      const z = (0.5 - gy / (GRID - 1)) * SIZE;
+      const hNorm = hm[gy][gx];
+const y = hNorm * elevH;
+verts.push(x, y, z);
+
+//const c = heightColor(hNorm);
+//cols.push(c.r, c.g, c.b);
+    }
+  }
+
+  const bottomOffset = GRID * GRID;
+
+  // Bottom vertices
+  for(let gy = 0; gy < GRID; gy++){
+    for(let gx = 0; gx < GRID; gx++){
+      const x = (gx / (GRID - 1) - 0.5) * SIZE;
+      const z = (0.5 - gy / (GRID - 1)) * SIZE;
+      verts.push(x, baseY, z);
+//cols.push(0.82, 0.78, 0.70);
+    }
+  }
+
+  // Top + bottom faces
+  for(let gy = 0; gy < GRID - 1; gy++){
+    for(let gx = 0; gx < GRID - 1; gx++){
+      const a = gy * GRID + gx;
+      const b = a + 1;
+      const c = a + GRID;
+      const d = c + 1;
+
+      // top
+idx.push(a, b, c, b, d, c);
+
+// bottom
+const ab = bottomOffset + a;
+const bb = bottomOffset + b;
+const cb = bottomOffset + c;
+const db = bottomOffset + d;
+
+idx.push(ab, cb, bb, bb, cb, db);
+    }
+  }
+
+  function addSide(topA, topB){
+    const botA = bottomOffset + topA;
+    const botB = bottomOffset + topB;
+    idx.push(topA, botA, topB, topB, botA, botB);
+  }
+
+  // South/North
+  for(let gx = 0; gx < GRID - 1; gx++){
+    addSide(gx, gx + 1);
+    addSide((GRID - 1) * GRID + gx + 1, (GRID - 1) * GRID + gx);
+  }
+
+  // West/East
+  for(let gy = 0; gy < GRID - 1; gy++){
+    addSide((gy + 1) * GRID, gy * GRID);
+    addSide(gy * GRID + GRID - 1, (gy + 1) * GRID + GRID - 1);
+  }
+
+  const g = new THREE.BufferGeometry();
+g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+
+g.setIndex(idx);
+  g.computeVertexNormals();
+ g.computeVertexNormals();
+g.normalizeNormals();
+g.computeBoundingSphere();
+return g;
+}
+function createSTLBlobFromTriangles(tris, filename){
+  const scale = currentSizeMm / SIZE;
+
+  const buf = new ArrayBuffer(80 + 4 + tris.length * 50);
+  const dv = new DataView(buf);
+
+  const hdr = `Relief3D — ${filename}`;
+  for(let i = 0; i < 80; i++){
+    dv.setUint8(i, i < hdr.length ? hdr.charCodeAt(i) : 0);
+  }
+
+  dv.setUint32(80, tris.length, true);
+
+  let off = 84;
+  const nv = new THREE.Vector3();
+
+  for(const [a, b, c] of tris){
+    nv.crossVectors(
+      new THREE.Vector3().subVectors(b, a),
+      new THREE.Vector3().subVectors(c, a)
+    ).normalize();
+
+    for(const v of [nv, a, b, c]){
+      dv.setFloat32(off, v.x * scale, true); off += 4;
+      dv.setFloat32(off, v.y * scale, true); off += 4;
+      dv.setFloat32(off, v.z * scale, true); off += 4;
+    }
+
+    dv.setUint16(off, 0, true);
+    off += 2;
+  }
+
+  return new Blob([buf], { type: 'application/octet-stream' });
+}
+
+  
+function downloadSTLFromTriangles(tris, filename){
+  const blob = createSTLBlobFromTriangles(tris, filename);
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+  
+async function waitForVercelBlobClient(){
+  const start = Date.now();
+
+  while(!window.uploadVercelBlob){
+    if(Date.now() - start > 8000){
+      throw new Error('Client Vercel Blob non chargé.');
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  return window.uploadVercelBlob;
+}
+
+async function uploadSTLToVercel(stlBlob, filename){
+  const upload = await waitForVercelBlobClient();
+
+  const safeFilename = filename
+    .replace(/\s+/g, '-')
+    .replace(/[^\w.\-]/g, '')
+    .toLowerCase();
+
+const pathname = `${Date.now()}-${safeFilename}`;
+
+  const blob = await upload(pathname, stlBlob, {
+    access: 'public',
+    handleUploadUrl: '/api/upload-stl',
+    contentType: 'application/octet-stream',
+    onUploadProgress: ({ percentage }) => {
+      setStatus(`Upload STL ${safeFilename}… ${Math.round(percentage)}%`);
+    }
+  });
+
+  return blob.url;
+}
+
+async function generateAndUploadOrderSTLs(){
+  if(!heightmapCache){
+    throw new Error('Charge d’abord un fichier GPX.');
+  }
+
+  const elevH = getRealScaleElevationHeight() * cfg.elevScale;
+  const baseY = -cfg.baseThick;
+  const hm = heightmapCache.heights;
+
+  const safeName = (cfg.txt1 || 'relief3d')
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]/g, '')
+    .toLowerCase();
+
+  const terrainFilename = `terrain-${safeName}-${currentSizeMm}mm.stl`;
+  const terrainGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
+  const terrainTris = collectTrianglesFromGeometry(terrainGeo);
+  const terrainBlob = createSTLBlobFromTriangles(terrainTris, terrainFilename);
+
+  const terrainUrl = await uploadSTLToVercel(terrainBlob, terrainFilename);
+
+  let traceUrl = '';
+
+  if(normalizedPath && normalizedPath.length > 1){
+    const traceFilename = `trace-gpx-${safeName}-${currentSizeMm}mm.stl`;
+    const traceGeo = createRaisedPathGeometry(elevH);
+    const traceTris = collectTrianglesFromGeometry(traceGeo);
+    const traceBlob = createSTLBlobFromTriangles(traceTris, traceFilename);
+
+    traceUrl = await uploadSTLToVercel(traceBlob, traceFilename);
+  }
+
+  return {
+    terrainUrl,
+    traceUrl
+  };
+}
+  
+  function collectTrianglesFromGeometry(geo){
+  const tris = [];
+  const pos = geo.attributes.position;
+  const ix = geo.index;
+
+  const mk = i => new THREE.Vector3(
+    pos.getX(i),
+    pos.getY(i),
+    pos.getZ(i)
+  );
+
+  if(ix){
+    for(let i = 0; i < ix.count; i += 3){
+      tris.push([
+        mk(ix.getX(i)),
+        mk(ix.getX(i + 1)),
+        mk(ix.getX(i + 2))
+      ]);
+    }
+  } else {
+    for(let i = 0; i < pos.count; i += 3){
+      tris.push([
+        mk(i),
+        mk(i + 1),
+        mk(i + 2)
+      ]);
+    }
+  }
+
+  geo.dispose();
+  return tris;
+}
+function exportSTL(){
+  if(!heightmapCache){
+    alert('Charge d\'abord un fichier GPX.');
+    return;
+  }
+
+  setStatus('Génération des STL terrain + GPX…');
+
+  const elevH = 1.8 * (cfg.elevScale / 4);
+  const baseY = -cfg.baseThick;
+  const hm = heightmapCache.heights;
+
+  const safeName = cfg.txt1
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]/g, '')
+    .toLowerCase();
+
+  // 1. STL terrain seul
+  const terrainGeo = buildSolidTerrainGeometry(hm, elevH, baseY);
+  const terrainTris = collectTrianglesFromGeometry(terrainGeo);
+
+  downloadSTLFromTriangles(
+    terrainTris,
+    `terrain-${safeName}-${currentSizeMm}mm.stl`
+  );
+
+  // 2. STL tracé GPX seul
+  if(normalizedPath && normalizedPath.length > 1){
+    const traceGeo = createRaisedPathGeometry(elevH);
+    const traceTris = collectTrianglesFromGeometry(traceGeo);
+
+    setTimeout(() => {
+      downloadSTLFromTriangles(
+        traceTris,
+        `trace-gpx-${safeName}-${currentSizeMm}mm.stl`
+      );
+    }, 300);
+  }
+
+  setStatus('✓ STL terrain + tracé GPX exportés séparément');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  UI BINDINGS
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('load', initThree);
+
+function bindRebuild(id, key, fmt){
+  const el=$(id), val=$(id+'Val');
+  el.addEventListener('input',()=>{
+    cfg[key]=parseFloat(el.value);
+    val.textContent=fmt(cfg[key]);
+    if(heightmapCache) buildScene();
+  });
+}
+function bindCam(id, key, fmt){
+  const el=$(id), val=$(id+'Val');
+  el.addEventListener('input',()=>{
+    cfg[key]=parseFloat(el.value);
+    val.textContent=fmt(cfg[key]);
+    updateCamera();
+  });
+}
+
+bindRebuild('elev',   'elevScale', v=>v.toFixed(1));
+bindRebuild('base',   'baseThick', v=>v.toFixed(2));
+bindRebuild('traceW', 'traceW', v => `${(v * currentSizeMm / SIZE).toFixed(1)}`);
+bindRebuild('traceH', 'traceH', v => `${(v * currentSizeMm / SIZE).toFixed(1)}`);
+bindCam('zoom', 'zoom', v=>v.toFixed(2)+'×');
+bindCam('rotH', 'rotH', v=>v+'°');
+bindCam('rotV', 'rotV', v=>v+'°');
+
+  function syncViewSliders(){
+  $('zoom').value = cfg.zoom;
+  $('zoomVal').textContent = cfg.zoom.toFixed(2) + '×';
+
+  $('rotH').value = cfg.rotH;
+  $('rotHVal').textContent = Math.round(cfg.rotH) + '°';
+
+  $('rotV').value = cfg.rotV;
+  $('rotVVal').textContent = Math.round(cfg.rotV) + '°';
+}
+
+function bindViewSlider(viewId, viewValId, key, fmt){
+  const el = $(viewId);
+  const val = $(viewValId);
+
+  el.addEventListener('input', ()=>{
+    cfg[key] = parseFloat(el.value);
+    val.textContent = fmt(cfg[key]);
+
+    // Synchronise aussi le slider du menu de droite
+    const sideSlider = $(key === 'zoom' ? 'zoom' : key);
+    const sideVal = $(key === 'zoom' ? 'zoomVal' : key + 'Val');
+
+    if(sideSlider) sideSlider.value = cfg[key];
+    if(sideVal) sideVal.textContent = fmt(cfg[key]);
+
+    updateCamera();
+  });
+}
+
+bindViewSlider('zoomView', 'zoomViewVal', 'zoom', v=>v.toFixed(2)+'×');
+bindViewSlider('rotHView', 'rotHViewVal', 'rotH', v=>Math.round(v)+'°');
+bindViewSlider('rotVView', 'rotVViewVal', 'rotV', v=>Math.round(v)+'°');
+  
+// Format Bureau / Cadre
+$('formatGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('click',()=>{
+  $('formatGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+
+  cfg.format = el.dataset.format;
+
+  updateFormatUI();
+}));
+
+function updateFormatUI(){
+  const size150 = $('sizeGrid').querySelector('.size-opt[data-mm="150"]');
+  const size200 = $('sizeGrid').querySelector('.size-opt[data-mm="200"]');
+
+  if(cfg.format === 'bureau'){
+    $('txt3').style.display = 'block';
+    $('txt3Align').style.display = 'block';
+
+    if(size200) size200.style.display = '';
+
+    setStatus('Format bureau sélectionné');
+  }
+
+  if(cfg.format === 'cadre'){
+    $('txt3').style.display = 'none';
+    $('txt3Align').style.display = 'none';
+
+    // En format cadre : uniquement 15 cm
+    currentSizeMm = 150;
+
+    $('sizeGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
+    if(size150) size150.classList.add('active');
+    if(size200) size200.style.display = 'none';
+
+    setStatus('Format cadre mural sélectionné');
+  }
+
+  $('traceWVal').textContent = `${(cfg.traceW * currentSizeMm / SIZE).toFixed(1)}`;
+  $('traceHVal').textContent = `${(cfg.traceH * currentSizeMm / SIZE).toFixed(1)}`;
+
+  if(heightmapCache) buildScene();
+}
+
+updateFormatUI();
+
+
+// Surface 3D autour du tracé : ce paramètre modifie la bbox,
+// donc il faut recharger pour refaire l'appel DEM et recalculer le relief.
+function updateSurfaceUI(){
+  const pct = Math.round(cfg.margin * 100);
+  $('surfaceVal').textContent = `Marge ${pct}%`;
+  $('surfaceMargin').value = cfg.margin.toFixed(2);
+}
+
+function setSurfaceMargin(v){
+  cfg.margin = clamp(v, 0.05, 0.60);
+  updateSurfaceUI();
+
+  if(gpxPoints || pendingGPX){
+    $('reloadNote').style.display = 'block';
+    $('loadBtn').disabled = false;
+    setStatus('Surface modifiée → recharge le terrain pour recalculer le relief');
+  }
+}
+
+$('surfaceMinus').addEventListener('click',()=>setSurfaceMargin(cfg.margin - 0.05));
+$('surfacePlus').addEventListener('click',()=>setSurfaceMargin(cfg.margin + 0.05));
+$('surfaceMargin').addEventListener('input',e=>setSurfaceMargin(parseFloat(e.target.value)));
+updateSurfaceUI();
+
+// Couleur tracé
+$('cgrid').querySelectorAll('.copt').forEach(el=>el.addEventListener('click',()=>{
+  $('cgrid').querySelectorAll('.copt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  cfg.traceColor=el.dataset.c;
+  if(heightmapCache) buildScene();
+}));
+
+// Palette terrain
+// Couleur terrain uniforme
+$('pgrid').querySelectorAll('.popt').forEach(el=>el.addEventListener('click',()=>{
+  $('pgrid').querySelectorAll('.popt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+
+  currentPalette = el.dataset.p;
+
+  const terrainColors = {
+  gris:  '#3f3f3f',
+  blanc: '#8c8c8c',
+  noir:  '#111111'
+};
+
+
+  cfg.terrainColor = terrainColors[currentPalette] || '#3f3f3f';
+
+  if(heightmapCache) buildScene();
+}));
+
+// Plaque
+$('txt1').addEventListener('input',()=>{ cfg.txt1=$('txt1').value; updatePlate(); if(heightmapCache) buildScene(); });
+$('txt2').addEventListener('input',()=>{ cfg.txt2=$('txt2').value; updatePlate(); if(heightmapCache) buildScene(); });
+$('txt3').addEventListener('input',()=>{ cfg.txt3=$('txt3').value; updatePlate(); if(heightmapCache) buildScene(); });
+
+$('txt1Align').addEventListener('change',()=>{ cfg.txt1Align=$('txt1Align').value; if(heightmapCache) buildScene(); });
+$('txt2Align').addEventListener('change',()=>{ cfg.txt2Align=$('txt2Align').value; if(heightmapCache) buildScene(); });
+$('txt3Align').addEventListener('change',()=>{ cfg.txt3Align=$('txt3Align').value; if(heightmapCache) buildScene(); });
+
+// Taille modèle
+$('sizeGrid').querySelectorAll('.size-opt').forEach(el=>el.addEventListener('click',()=>{
+  $('sizeGrid').querySelectorAll('.size-opt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+
+  currentSizeMm = parseInt(el.dataset.mm);
+
+  $('traceWVal').textContent = `${(cfg.traceW * currentSizeMm / SIZE).toFixed(1)}`;
+  $('traceHVal').textContent = `${(cfg.traceH * currentSizeMm / SIZE).toFixed(1)}`;
+
+  if(heightmapCache) buildScene();
+}));
+
+// ── GPX Upload ────────────────────────────────────────────────
+function handleGPXFile(file){
+  if(!file) return;
+  pendingName = file.name;
+  $('finfo').style.display='block';
+  $('finfo').innerHTML=`<strong>${file.name}</strong> — lecture en cours…`;
+  $('loadBtn').disabled=false;
+  setStatus('GPX prêt → cliquer "Charger le terrain"');
+
+  const reader=new FileReader();
+  reader.onload=ev=>{ pendingGPX=ev.target.result; };
+  reader.onerror=()=>setStatus('Erreur lecture fichier GPX');
+  reader.readAsText(file);
+}
+
+$('dropzone').addEventListener('click',()=>$('gpxinput').click());
+$('gpxinput').addEventListener('change',e=>handleGPXFile(e.target.files[0]));
+
+const dz=$('dropzone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleGPXFile(e.dataTransfer.files[0]);});
+
+// ── Bouton Charger ────────────────────────────────────────────
+$('loadBtn').addEventListener('click', async function(){
+  if(!pendingGPX){ alert('Sélectionne d\'abord un fichier GPX.'); return; }
+  this.disabled=true;
+  heightmapCache=null; normalizedPath=null;
+  $('stlBtn').disabled=true; $('orderBtn').disabled=true;
+//  $('statsOverlay').style.display='none';
+  const badge=$('terrainBadge'); badge.style.display='none';
+  $('reloadNote').style.display='none';
+
+  try {
+    setStatus('Parsing GPX…');
+    const pts=parseGPX(pendingGPX);
+    if(pts.length<10) throw new Error('GPX invalide (moins de 10 points).');
+    gpxPoints=pts;
+
+    const r500=resample(pts,500);
+    gpxBBox=computeBBox(r500, cfg.margin);
+
+    const stats=gpxStats(pts);
+    cfg.txt2=`${stats.distKm.toFixed(1)} km · ${stats.dPlus} m D+`;
+    $('txt2').value=cfg.txt2;
+    $('finfo').innerHTML=
+      `<strong>${pendingName}</strong><br>` +
+      `${pts.length} pts · ${stats.distKm.toFixed(1)} km · D+${stats.dPlus} m · D−${stats.dMinus} m`;
+
+    // ─ API OpenTopography ─
+    try {
+      heightmapCache = await loadHeightmap(gpxBBox);
+    } catch(err){
+      console.warn('OpenTopography indisponible, fallback IDW:', err.message);
+      heightmapCache = buildFallbackHeightmap(r500, gpxBBox);
+    }
+
+    // Normaliser le chemin sur la bbox
+    normalizedPath = r500.map(p=>({
+      nx: clamp((p.lon-gpxBBox.minLon)/(gpxBBox.maxLon-gpxBBox.minLon||1),0,1),
+      ny: clamp((p.lat-gpxBBox.minLat)/(gpxBBox.maxLat-gpxBBox.minLat||1),0,1),
+    }));
+
+    buildScene();
+
+    $('stlBtn').disabled=false;
+    $('orderBtn').disabled=false;
+
+    badge.style.display='inline-block';
+    if(heightmapCache.mode.startsWith('opentopography-')){
+      badge.textContent=`✓ SRTM GL3 réel · ${heightmapCache.minEle.toFixed(0)}–${heightmapCache.maxEle.toFixed(0)} m`;
+      badge.className='real';
+    } else {
+      badge.textContent='⚠ Fallback IDW (API indisponible)';
+      badge.className='fallback';
+    }
+
+  } catch(err){
+    alert(err.message||'Erreur inattendue.');
+    setStatus('Erreur : '+err.message);
+  } finally {
+    this.disabled=false;
+  }
+});
+
+$('stlBtn').addEventListener('click', exportSTL);
+
+$('orderBtn').addEventListener('click', async ()=>{
+  if(!heightmapCache){
+    alert('Charge d’abord un GPX.');
+    return;
+  }
+
+  const btn = $('orderBtn');
+  btn.disabled = true;
+  btn.textContent = 'Préparation STL…';
+
+  try {
+    setStatus('Génération et upload des STL…');
+
+    const stlFiles = await generateAndUploadOrderSTLs();
+
+    const s = gpxStats(gpxPoints || []);
+
+    const item = {
+      id: 53839425077589,
+      quantity: 1,
+      properties: {
+         "Format": cfg.format === 'cadre' ? 'Cadre mural' : 'Bureau',
+        "Fichier GPX": pendingName,
+        "Course": cfg.txt1,
+        "Infos": cfg.txt2,
+        "Texte 3": cfg.format === 'cadre' ? '' : cfg.txt3,
+        "Distance": `${s.distKm.toFixed(1)} km`,
+        "D+": `${s.dPlus} m`,
+        "D-": `${s.dMinus} m`,
+        "Taille": `${currentSizeMm} × ${currentSizeMm} mm`,
+        "Surface 3D": `marge ${Math.round(cfg.margin * 100)}%`,
+        "Élévation": `${cfg.elevScale}`,
+        "Base": `${cfg.baseThick}`,
+        "Palette": currentPalette,
+        "Couleur tracé": cfg.traceColor,
+        "Largeur tracé": cfg.traceW.toFixed(3),
+        "Hauteur tracé": cfg.traceH.toFixed(3),
+        "Altitude min": `${heightmapCache.minEle.toFixed(0)} m`,
+        "Altitude max": `${heightmapCache.maxEle.toFixed(0)} m`,
+        "Source élévation": heightmapCache.mode,
+        "STL terrain": stlFiles.terrainUrl,
+        "STL tracé GPX": stlFiles.traceUrl
+      }
+    };
+
+    window.parent.postMessage({
+      type: 'ADD_RELIEF3D_TO_CART',
+      item: item
+    }, '*');
+
+    setStatus('✓ STL uploadés, ajout au panier Shopify…');
+
+  } catch(err) {
+    console.error(err);
+    alert(err.message || 'Erreur pendant la préparation de la commande.');
+    setStatus('Erreur commande : ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Commander →';
+  }
+});
+
+
+window.addEventListener('resize',()=>{
+  if(!renderer||!camera) return;
+  const wrap=$('viewer'), w=wrap.clientWidth, h=wrap.clientHeight;
+  renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
+});
+</script>
+</body>
+</html>
