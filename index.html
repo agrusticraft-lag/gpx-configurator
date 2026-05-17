@@ -2302,6 +2302,46 @@ $('loadBtn').addEventListener('click', async function(){
 
 $('stlBtn').addEventListener('click', exportSTL);
 
+async function testGenerateSTLServer(){
+  if(!pendingGPX){
+    throw new Error('Aucun GPX chargé.');
+  }
+
+  const payload = {
+    gpxText: pendingGPX,
+    filename: pendingName,
+    options: {
+      format: cfg.format,
+      sizeMm: currentSizeMm,
+      elevScale: cfg.elevScale,
+      baseThick: cfg.baseThick,
+      margin: cfg.margin,
+      traceW: cfg.traceW,
+      traceH: cfg.traceH,
+      traceColor: cfg.traceColor,
+      terrainColor: cfg.terrainColor,
+      txt1: cfg.txt1,
+      txt2: cfg.txt2,
+      txt3: cfg.txt3
+    }
+  };
+
+  const resp = await fetch('/api/generate-stl', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await resp.json();
+
+  console.log('Réponse serveur generate-stl:', data);
+  alert(JSON.stringify(data, null, 2));
+
+  return data;
+}
+  
 $('orderBtn').addEventListener('click', async ()=>{
   if(!heightmapCache){
     alert('Charge d’abord un GPX.');
@@ -2315,7 +2355,9 @@ $('orderBtn').addEventListener('click', async ()=>{
   try {
     setStatus('Génération et upload des STL…');
 
-    const stlFiles = await generateAndUploadOrderSTLs();
+    await testGenerateSTLServer();
+    return;
+    //const stlFiles = await generateAndUploadOrderSTLs();
 
     const s = gpxStats(gpxPoints || []);
 
