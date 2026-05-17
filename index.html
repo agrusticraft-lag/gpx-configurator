@@ -2302,7 +2302,7 @@ $('loadBtn').addEventListener('click', async function(){
 
 $('stlBtn').addEventListener('click', exportSTL);
 
-async function testGenerateSTLServer(){
+async function generateAndUploadOrderSTLsSecure(){
   if(!pendingGPX){
     throw new Error('Aucun GPX chargé.');
   }
@@ -2336,8 +2336,13 @@ async function testGenerateSTLServer(){
 
   const data = await resp.json();
 
-  console.log('Réponse serveur generate-stl:', data);
-  alert(JSON.stringify(data, null, 2));
+  if(!resp.ok){
+    throw new Error(data?.error || 'Erreur génération STL serveur');
+  }
+
+  if(!data.terrainUrl){
+    throw new Error('Aucun lien STL terrain reçu du serveur');
+  }
 
   return data;
 }
@@ -2353,13 +2358,17 @@ $('orderBtn').addEventListener('click', async ()=>{
   btn.textContent = 'Préparation STL…';
 
   try {
-    setStatus('Génération et upload des STL…');
+ setStatus('Génération STL sécurisée côté serveur…');
 
-    await testGenerateSTLServer();
-    return;
-    //const stlFiles = await generateAndUploadOrderSTLs();
+const stlFiles = await generateAndUploadOrderSTLsSecure();
 
-    const s = gpxStats(gpxPoints || []);
+const statsLocal = gpxStats(gpxPoints || []);
+
+const s = {
+  distKm: stlFiles.distanceKm ?? statsLocal.distKm,
+  dPlus: stlFiles.dPlus ?? statsLocal.dPlus,
+  dMinus: stlFiles.dMinus ?? statsLocal.dMinus
+};
 
     const item = {
       id: 53839425077589,
@@ -2381,9 +2390,9 @@ $('orderBtn').addEventListener('click', async ()=>{
         "Couleur tracé": cfg.traceColor,
         "Largeur tracé": cfg.traceW.toFixed(3),
         "Hauteur tracé": cfg.traceH.toFixed(3),
-        "Altitude min": `${heightmapCache.minEle.toFixed(0)} m`,
-        "Altitude max": `${heightmapCache.maxEle.toFixed(0)} m`,
-        "Source élévation": heightmapCache.mode,
+"Altitude min": `${Math.round(stlFiles.minEle ?? heightmapCache.minEle)} m`,
+"Altitude max": `${Math.round(stlFiles.maxEle ?? heightmapCache.maxEle)} m`,
+"Source élévation": stlFiles.source ?? heightmapCache.mode,
         "STL terrain": stlFiles.terrainUrl,
         "STL tracé GPX": stlFiles.traceUrl
       }
