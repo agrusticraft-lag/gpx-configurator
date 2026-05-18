@@ -2189,7 +2189,7 @@ const s = {
       id: 53839425077589,
       quantity: 1,
       properties: {
-         "Format": cfg.format === 'cadre' ? 'Cadre mural' : 'Bureau',
+        "Format": cfg.format === 'cadre' ? 'Cadre mural' : 'Bureau',
         "Fichier GPX": pendingName,
         "Ligne 1": cfg.txt1,
         "Alignement ligne 1": getAlignLabel(cfg.txt1Align),
@@ -2200,7 +2200,7 @@ const s = {
         "Distance": `${s.distKm.toFixed(1)} km`,
         "D+": `${s.dPlus} m`,
         "D-": `${s.dMinus} m`,
-        "Taille": `${currentSizeMm} × ${currentSizeMm} mm`,
+        "Taille": `${currentSizeMm / 10} cm`,
         "Surface 3D": `marge ${Math.round(cfg.margin * 100)}%`,
         "Élévation": `${cfg.elevScale}`,
         "Base": `${cfg.baseThick}`,
