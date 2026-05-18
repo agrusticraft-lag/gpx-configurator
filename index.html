@@ -2154,6 +2154,17 @@ async function generateAndUploadOrderSTLsSecure(){
   const active = document.querySelector('#cgrid .copt.active');
   return active ? active.textContent.trim() : cfg.traceColor;
 }
+
+  function getAlignLabel(value){
+  if(value === 'left') return 'Gauche';
+  if(value === 'center') return 'Centré';
+  if(value === 'right') return 'Droite';
+  return value || '';
+}
+
+$('orderBtn').addEventListener('click', async ()=>{
+  ...
+});
 $('orderBtn').addEventListener('click', async ()=>{
   if(!heightmapCache){
     alert('Charge d’abord un GPX.');
@@ -2184,11 +2195,11 @@ const s = {
          "Format": cfg.format === 'cadre' ? 'Cadre mural' : 'Bureau',
         "Fichier GPX": pendingName,
         "Ligne 1": cfg.txt1,
-        "Alignement ligne 1": cfg.txt1Align,
+        "Alignement ligne 1": getAlignLabel(cfg.txt1Align),
         "Ligne 2": cfg.txt2,
-        "Alignement ligne 2": cfg.txt2Align,
+        "Alignement ligne 2": getAlignLabel(cfg.txt2Align),
         "Ligne 3": cfg.format === 'cadre' ? '' : cfg.txt3,
-        "Alignement ligne 3": cfg.format === 'cadre' ? '' : cfg.txt3Align,
+        "Alignement ligne 3": cfg.format === 'cadre' ? '' : getAlignLabel(cfg.txt3Align),
         "Distance": `${s.distKm.toFixed(1)} km`,
         "D+": `${s.dPlus} m`,
         "D-": `${s.dMinus} m`,
