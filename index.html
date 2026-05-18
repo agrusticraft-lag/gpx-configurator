@@ -2150,7 +2150,10 @@ async function generateAndUploadOrderSTLsSecure(){
 
   return data;
 }
-  
+  function getSelectedTraceColorName(){
+  const active = document.querySelector('#cgrid .copt.active');
+  return active ? active.textContent.trim() : cfg.traceColor;
+}
 $('orderBtn').addEventListener('click', async ()=>{
   if(!heightmapCache){
     alert('Charge d’abord un GPX.');
@@ -2180,9 +2183,9 @@ const s = {
       properties: {
          "Format": cfg.format === 'cadre' ? 'Cadre mural' : 'Bureau',
         "Fichier GPX": pendingName,
-        "Course": cfg.txt1,
-        "Infos": cfg.txt2,
-        "Texte 3": cfg.format === 'cadre' ? '' : cfg.txt3,
+        "Ligne 1": cfg.txt1,
+        "Ligne 2": cfg.txt2,
+        "Ligne 3": cfg.format === 'cadre' ? '' : cfg.txt3,
         "Distance": `${s.distKm.toFixed(1)} km`,
         "D+": `${s.dPlus} m`,
         "D-": `${s.dMinus} m`,
@@ -2191,7 +2194,7 @@ const s = {
         "Élévation": `${cfg.elevScale}`,
         "Base": `${cfg.baseThick}`,
         "Palette": currentPalette,
-        "Couleur tracé": cfg.traceColor,
+        "Couleur tracé": getSelectedTraceColorName(),
         "Largeur tracé": cfg.traceW.toFixed(3),
         "Hauteur tracé": cfg.traceH.toFixed(3),
 "Altitude min": `${Math.round(stlFiles.minEle ?? heightmapCache.minEle)} m`,
