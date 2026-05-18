@@ -646,21 +646,20 @@ text-shadow:0 1px 2px rgba(0,0,0,.45);
     <!-- 6 · Plaque -->
     <div class="section">
       <div class="stitle"><span class="num">6</span>Plaque gravée</div>
-      <input type="text" id="txt1" value="Patrouille des Glaciers" placeholder="Ligne 1 — Nom de la course">
+     <input type="text" id="txt1" value="UTMB Mont-Blanc 2022                   170.3km 10'050m D+" placeholder="Ligne 1">
       <select id="txt1Align">
         <option value="left" selected>Ligne 1 — Aligné à gauche</option>
         <option value="center">Ligne 1 — Centré</option>
         <option value="right">Ligne 1 — Aligné à droite</option>
       </select>
-
-      <input type="text" id="txt2" value="57.5 km · 4380 m D+" placeholder="Ligne 2 — Stats">
+<input type="text" id="txt2" value="Kilian JORNET #1  19:49:30" placeholder="Ligne 2">
       <select id="txt2Align">
         <option value="left"selected>Ligne 2 — Aligné à gauche</option>
         <option value="center" >Ligne 2 — Centré</option>
         <option value="right">Ligne 2 — Aligné à droite</option>
       </select>
 
-      <input type="text" id="txt3" value="" placeholder="Ligne 3 — Noms / Date (optionnel)">
+     <input type="text" id="txt3" value="Le sommet n'est rien." placeholder="Ligne 3">
       <select id="txt3Align">
         <option value="left"selected>Ligne 3 — Aligné à gauche</option>
         <option value="center" >Ligne 3 — Centré</option>
@@ -756,7 +755,9 @@ let cfg = {
   zoom: 1.0, rotH: -30, rotV: 38,
   traceW: 0.07, traceH: 0.09, traceColor: '#b87333',
   terrainColor: '#3f3f3f',
-  txt1: 'Le nom de ta course 1', txt2: '57.5 km · 4380 m D+', txt3: 'Bravo pour cette course',
+txt1: "UTMB Mont-Blanc 2022                   170.3km 10'050m D+",
+txt2: "Kilian JORNET #1  19:49:30",
+txt3: "Le sommet n'est rien.",
   txt1Align: 'left', txt2Align: 'left', txt3Align: 'left',
   textLetterSpacing: -3,
 };
@@ -2065,8 +2066,7 @@ $('loadBtn').addEventListener('click', async function(){
     gpxBBox=computeBBox(r500, cfg.margin);
 
     const stats=gpxStats(pts);
-    cfg.txt2=`${stats.distKm.toFixed(1)} km · ${stats.dPlus} m D+`;
-    $('txt2').value=cfg.txt2;
+
     $('finfo').innerHTML=
       `<strong>${pendingName}</strong><br>` +
       `${pts.length} pts · ${stats.distKm.toFixed(1)} km · D+${stats.dPlus} m · D−${stats.dMinus} m`;
